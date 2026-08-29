@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qube - Speed Quiz Arena</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ===================== LOGIN ===================== -->
+    <section id="screen-login" class="screen active">
+        <div class="panel">
+            <h1>Qube</h1>
+            <p class="subtitle">Speed Quiz Arena</p>
+            <form id="login-form">
+                <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="16" required>
+                <button type="submit" class="btn btn-primary">Continue</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- ===================== CUSTOMIZE ===================== -->
+    <section id="screen-customize" class="screen">
+        <div class="panel">
+            <h2>Customize Your Character</h2>
+            <div id="customize-preview" class="character-stage"></div>
+
+            <div class="color-controls">
+                <label>Body Color <input type="color" id="color-body" value="#ffffff"></label>
+            </div>
+
+            <button id="confirm-character-btn" class="btn btn-primary">Enter Lobby</button>
+        </div>
+    </section>
+
+    <!-- ===================== LOBBY ===================== -->
+    <section id="screen-lobby" class="screen">
+        <div class="panel panel-wide">
+            <h2>Lobby</h2>
+
+            <div class="lobby-grid">
+                <div class="lobby-players">
+                    <h3>Players Online</h3>
+                    <ul id="lobby-player-list"></ul>
+                    <button id="find-match-btn" class="btn btn-primary">Find Match</button>
+                    <p id="match-status" class="status-text"></p>
+                </div>
+
+                <div class="lobby-chat">
+                    <h3>Global Chat</h3>
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <form id="chat-form" class="chat-form">
+                        <input type="text" id="chat-input" placeholder="Say something..." maxlength="200" autocomplete="off">
+                        <button type="submit" class="btn">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== MATCH ===================== -->
+    <section id="screen-match" class="screen">
+        <div class="panel panel-wide">
+            <div id="timer-display" class="timer-top">15</div>
+
+            <div class="arena">
+                <div class="fighter">
+                    <div class="fighter-name" id="my-name"></div>
+                    <div class="hp-bar-outer"><div class="hp-bar-inner" id="my-hp-bar"></div></div>
+                    <div class="hp-value"><span id="my-hp">100</span> HP</div>
+                    <div id="my-character-container" class="character-stage"></div>
+                </div>
+
+                <div class="vs-label">VS</div>
+
+                <div class="fighter">
+                    <div class="fighter-name" id="opponent-name"></div>
+                    <div class="hp-bar-outer"><div class="hp-bar-inner" id="opponent-hp-bar"></div></div>
+                    <div class="hp-value"><span id="opponent-hp">100</span> HP</div>
+                    <div id="opponent-character-container" class="character-stage"></div>
+                </div>
+            </div>
+
+            <div class="quiz-container">
+                <h3 id="question-text">Waiting for question...</h3>
+                <div id="choices-container" class="choices-container"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SignalR client library (loaded locally, same-origin) -->
+    <script src="signalr.min.js"></script>
+    <script src="js/character.js"></script>
+    <script src="js/signalrClient.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/customize.js"></script>
+    <script src="js/lobby.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

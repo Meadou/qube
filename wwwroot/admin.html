@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qube Admin - Quiz Loader</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-wrap { max-width: 700px; margin: 40px auto; padding: 0 20px; }
+        textarea {
+            width: 100%;
+            height: 320px;
+            background: #1f2128;
+            color: var(--text);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+        .admin-status { margin-top: 12px; color: var(--muted); font-size: 14px; }
+        .example { color: var(--muted); font-size: 12px; white-space: pre-wrap; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="admin-wrap panel">
+        <h2>Load Quiz Questions (Aiken format)</h2>
+        <p style="color: var(--muted); font-size: 14px;">
+            Paste your questions below and click Upload. This <strong>replaces</strong> the entire
+            active question set — clear the box and paste a new set any time you want to run a different quiz.
+        </p>
+
+        <textarea id="aiken-input" placeholder="Paste Aiken-format questions here..."></textarea>
+        <div>
+            <button id="upload-btn" class="btn btn-primary" style="margin-top: 12px;">Upload</button>
+            <button id="clear-btn" class="btn" style="margin-top: 12px;">Clear Box</button>
+        </div>
+        <div id="admin-status" class="admin-status"></div>
+
+        <div class="example">Example format:
+
+What is the capital of France?
+A) Berlin
+B) Madrid
+C) Paris
+D) Rome
+ANSWER: C
+
+(blank line between each question)</div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('admin-status');
+
+        async function refreshCount() {
+            const res = await fetch('/api/admin/quiz/count');
+            const data = await res.json();
+            statusEl.textContent = `Currently active: ${data.count} question(s).`;
+        }
+
+        document.getElementById('upload-btn').addEventListener('click', async () => {
+            const text = document.getElementById('aiken-input').value;
+            statusEl.textContent = 'Uploading...';
+            const res = await fetch('/api/admin/quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: text
+            });
+            const data = await res.json();
+            statusEl.textContent = `Done. Active question set now has ${data.count} question(s).`;
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            document.getElementById('aiken-input').value = '';
+        });
+
+        refreshCount();
+    </script>
+</body>
+</html>
