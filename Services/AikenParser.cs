@@ -2,7 +2,9 @@ using CSharpQuizGame.Models;
 
 namespace CSharpQuizGame.Services;
 
-// Parses the standard Aiken quiz format:
+// Parses the standard Aiken quiz format. Any number of questions is
+// supported — the whole pasted block is scanned line by line and a new
+// question starts as soon as the previous one's ANSWER line is seen.
 //
 //   What color is the sky?
 //   A) Red
@@ -12,6 +14,10 @@ namespace CSharpQuizGame.Services;
 //   ANSWER: B
 //
 //   (blank line between questions)
+//
+// Choice letters may be followed by either ')' or '.' (both are valid in
+// the Aiken spec, e.g. "A) Red" or "A. Red") — some generators/exports use
+// one style, some the other, so both must be accepted.
 public static class AikenParser
 {
     public static List<QuizQuestion> Parse(string aikenText)
@@ -47,9 +53,10 @@ public static class AikenParser
                 current = null;
                 choiceLetterToIndex.Clear();
             }
-            else if (line.Length >= 2 && char.IsLetter(line[0]) && line[1] == ')')
+            else if (line.Length >= 2 && char.IsLetter(line[0]) && (line[1] == ')' || line[1] == '.'))
             {
-                // A choice line, e.g. "B) Blue" — only valid once a question line has started
+                // A choice line, e.g. "B) Blue" or "B. Blue" — both are valid Aiken
+                // delimiters, and only valid once a question line has started
                 if (current == null) continue;
 
                 var letter = char.ToUpperInvariant(line[0]);

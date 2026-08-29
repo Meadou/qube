@@ -41,3 +41,4 @@ C:\Users\mary ann pamilar\OneDrive\Desktop\USEP\Programming\My Projects\qube\obj
 C:\Users\mary ann pamilar\OneDrive\Desktop\USEP\Programming\My Projects\qube\obj\Debug\net10.0\compressed\1u780ilwul-{0}-0dm1rrq5oj-0dm1rrq5oj.gz
 C:\Users\mary ann pamilar\OneDrive\Desktop\USEP\Programming\My Projects\qube\obj\Debug\net10.0\compressed\7e5hebsixb-{0}-ul4qhisakn-ul4qhisakn.gz
 C:\Users\mary ann pamilar\OneDrive\Desktop\USEP\Programming\My Projects\qube\obj\Debug\net10.0\compressed\nvms76ihch-{0}-rhjl2c7tr3-rhjl2c7tr3.gz
+C:\Users\mary ann pamilar\OneDrive\Desktop\USEP\Programming\My Projects\qube\obj\Debug\net10.0\qube.sourcelink.json
