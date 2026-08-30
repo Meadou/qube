@@ -3,8 +3,6 @@ using CSharpQuizGame.Models;
 
 namespace CSharpQuizGame.Services;
 
-// Singleton tracking who's in the lobby, who's waiting to be matched, and
-// which rooms (1v1 matches) are currently active.
 public class RoomManager
 {
     public ConcurrentDictionary<string, PlayerInfo> LobbyPlayers { get; } = new();
@@ -24,8 +22,6 @@ public class RoomManager
         CancelQueue(connectionId);
     }
 
-    // Adds connectionId to the matchmaking queue. If this makes 2+ people
-    // waiting, dequeues the first two and returns them as a pair to be matched.
     public (string, string)? EnqueueForMatch(string connectionId)
     {
         lock (_queueLock)

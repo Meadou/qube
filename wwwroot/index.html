@@ -61,11 +61,16 @@
 
     <!-- ===================== MATCH ===================== -->
     <section id="screen-match" class="screen">
-        <div class="panel panel-wide">
-            <div id="timer-display" class="timer-top">15</div>
+        <div class="panel panel-wide" style="position: relative;">
+            <div id="hit-flash-overlay" class="hit-flash-overlay"></div>
+            <div class="match-header">
+                <div id="round-counter" class="round-counter">ROUND 1</div>
+                <div id="timer-display" class="timer-top">15</div>
+                <button id="sound-toggle-btn" class="sound-toggle" type="button" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+            </div>
 
             <div class="arena">
-                <div class="fighter">
+                <div class="fighter me">
                     <div class="fighter-name" id="my-name"></div>
                     <div class="hp-bar-outer"><div class="hp-bar-inner" id="my-hp-bar"></div></div>
                     <div class="hp-value"><span id="my-hp">100</span> HP</div>
@@ -74,7 +79,7 @@
 
                 <div class="vs-label">VS</div>
 
-                <div class="fighter">
+                <div class="fighter opp">
                     <div class="fighter-name" id="opponent-name"></div>
                     <div class="hp-bar-outer"><div class="hp-bar-inner" id="opponent-hp-bar"></div></div>
                     <div class="hp-value"><span id="opponent-hp">100</span> HP</div>
@@ -89,9 +94,23 @@
         </div>
     </section>
 
+    <!-- ===================== MATCH OVER ===================== -->
+    <section id="screen-matchover" class="screen">
+        <div class="panel">
+            <h2 id="matchover-title" class="matchover-title">Match Over</h2>
+            <p id="matchover-sub" class="matchover-sub"></p>
+            <div class="matchover-stage">
+                <div id="matchover-my-container" class="character-stage" style="width:110px;"></div>
+                <div id="matchover-opp-container" class="character-stage" style="width:110px;"></div>
+            </div>
+            <button id="matchover-continue-btn" class="btn btn-primary">Back to Lobby</button>
+        </div>
+    </section>
+
     <!-- SignalR client library (loaded locally, same-origin) -->
     <script src="signalr.min.js"></script>
     <script src="js/character.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/signalrClient.js"></script>
     <script src="js/main.js"></script>
     <script src="js/customize.js"></script>

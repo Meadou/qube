@@ -18,7 +18,5 @@ public class GameRoom
     public List<RoundAnswer> CurrentAnswers { get; set; } = new();
     public CancellationTokenSource? RoundTimeoutCts { get; set; }
 
-    // Guards CurrentAnswers / RoundTimeoutCts against concurrent access from
-    // two players submitting answers (or a timeout firing) at nearly the same time.
     public readonly object Lock = new();
 }

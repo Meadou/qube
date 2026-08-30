@@ -2,8 +2,6 @@ using CSharpQuizGame.Models;
 
 namespace CSharpQuizGame.Services;
 
-// Singleton holding the "active" question set. The admin replaces the whole
-// list at once by pasting new Aiken-format text — old questions are discarded.
 public class QuizService
 {
     private List<QuizQuestion> _questions = new();

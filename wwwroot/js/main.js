@@ -3,6 +3,7 @@ const screens = {
     customize: document.getElementById('screen-customize'),
     lobby: document.getElementById('screen-lobby'),
     match: document.getElementById('screen-match'),
+    matchover: document.getElementById('screen-matchover'),
 };
 
 function showScreen(name) {
@@ -10,7 +11,6 @@ function showScreen(name) {
     screens[name].classList.add('active');
 }
 
-// Shared state used across customize.js / lobby.js / game.js
 window.gameState = {
     playerName: '',
     characterConfig: {
@@ -34,3 +34,13 @@ function escapeHtml(str) {
     div.textContent = str;
     return div.innerHTML;
 }
+
+const soundToggleBtn = document.getElementById('sound-toggle-btn');
+function refreshSoundIcon() {
+    soundToggleBtn.textContent = GameSound.isMuted() ? '🔇' : '🔊';
+}
+refreshSoundIcon();
+soundToggleBtn.addEventListener('click', () => {
+    GameSound.setMuted(!GameSound.isMuted());
+    refreshSoundIcon();
+});
