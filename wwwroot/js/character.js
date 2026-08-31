@@ -27,8 +27,19 @@ class CubeCharacter {
         this.spriteEl = document.createElement('div');
         this.spriteEl.className = 'pixel-sprite';
 
+        // Right-facing characters are mirrored by reversing each row's pixel
+        // data directly, rather than flipping the whole grid with a CSS
+        // transform: scaleX(-1). The transform approach left visible hairline
+        // seams between adjacent grid cells (a sub-pixel rounding artifact
+        // browsers introduce when rasterizing a flipped grid) — mirroring the
+        // actual pixel order sidesteps that entirely, since each cell just
+        // renders in its true (already-mirrored) position with no transform.
+        const rows = side === 'player-right'
+            ? SPRITE_ROWS.map(row => [...row].reverse().join(''))
+            : SPRITE_ROWS;
+
         this.fillCells = [];
-        for (const rowStr of SPRITE_ROWS) {
+        for (const rowStr of rows) {
             for (const ch of rowStr) {
                 const cell = document.createElement('div');
                 if (ch === 'K') {

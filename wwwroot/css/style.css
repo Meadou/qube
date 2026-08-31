@@ -16,15 +16,20 @@
     --hp-warn: #ffcc33;
     --hp-bad: #ff3b3b;
     --gold: #ffd24d;
-    --px-size: 15px;
+    --px-size: 13px;
     --font-display: 'Press Start 2P', monospace;
     --font-body: 'Space Grotesk', 'Segoe UI', sans-serif;
 }
 
 * { box-sizing: border-box; }
 
+html {
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
+    overflow-x: hidden;
     font-family: var(--font-body);
     background:
         radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,229,255,0.10), transparent 60%),
@@ -60,6 +65,52 @@ body::after {
     pointer-events: none;
     z-index: 9998;
     background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+
+.game-brand {
+    position: fixed;
+    top: 14px;
+    left: 16px;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px 9px 11px;
+    background: var(--panel);
+    box-shadow:
+        0 0 0 2px var(--bg),
+        0 0 0 4px var(--panel-edge),
+        0 6px 14px rgba(0,0,0,0.5);
+    pointer-events: none;
+    user-select: none;
+}
+
+.game-brand-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.game-brand-icon .bolt-top { fill: var(--accent); }
+.game-brand-icon .bolt-bottom { fill: var(--p2); }
+
+.game-brand-text {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.game-brand-text .word-brain {
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(0,229,255,0.55);
+}
+
+.game-brand-text .word-brawl {
+    color: var(--p2);
+    margin-left: 5px;
+    text-shadow: 0 0 8px rgba(255,47,146,0.55);
 }
 
 .screen {
@@ -256,6 +307,72 @@ input[type="text"]:focus,
     min-height: 16px;
 }
 
+.private-room-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 14px;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.private-room-divider::before,
+.private-room-divider::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: var(--line);
+}
+
+.private-room-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.private-room-join-form {
+    display: flex;
+    gap: 8px;
+}
+
+.private-room-join-form input {
+    flex: 1;
+    margin-bottom: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+}
+
+.private-room-waiting {
+    text-align: center;
+}
+
+.private-room-label {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 10px;
+}
+
+.private-room-code-display {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 6px;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(0,229,255,0.5);
+    background: var(--bg-alt);
+    border: 2px solid var(--line);
+    padding: 12px 10px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    user-select: all;
+}
+
+.private-room-code-display:hover {
+    border-color: var(--accent-dim);
+}
+
 .lobby-chat {
     display: flex;
     flex-direction: column;
@@ -395,6 +512,48 @@ input[type="text"]:focus,
     padding: 22px;
 }
 
+.hidden {
+    display: none !important;
+}
+
+.ready-panel {
+    text-align: center;
+    padding: 8px 0 4px;
+}
+
+.ready-title {
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+
+.ready-status-text {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 16px;
+    min-height: 18px;
+}
+
+.ready-btn-taken {
+    background: var(--hp-good) !important;
+    border-color: var(--hp-good) !important;
+    color: #05230f !important;
+}
+
+.matchover-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.matchover-rematch-status {
+    color: var(--muted);
+    font-size: 12px;
+    min-height: 16px;
+    margin: -8px 0 14px;
+}
+
 #question-text {
     font-family: var(--font-body);
     text-transform: none;
@@ -489,6 +648,15 @@ input[type="text"]:focus,
     overflow: visible;
 }
 
+/* Smaller variant used for the match-over recap boxes, where the stage is
+   narrower — its own --px-size keeps the sprite's actual pixel-grid width
+   (10 * px-size) from ever exceeding the box, instead of relying on a fixed
+   inline width that didn't match the sprite's real size. */
+.character-stage-sm {
+    --px-size: 9px;
+    width: 118px;
+}
+
 .cube-character {
     display: flex;
     flex-direction: column;
@@ -500,10 +668,6 @@ input[type="text"]:focus,
     display: grid;
     grid-template-columns: repeat(10, var(--px-size));
     grid-template-rows: repeat(11, var(--px-size));
-}
-
-.player-right .pixel-sprite {
-    transform: scaleX(-1);
 }
 
 .px {
@@ -664,6 +828,11 @@ input[type="text"]:focus,
         grid-template-columns: 1fr;
     }
 
+    .private-room-code-display {
+        font-size: 18px;
+        letter-spacing: 4px;
+    }
+
     .arena {
         flex-direction: column;
         gap: 14px;
@@ -702,5 +871,67 @@ input[type="text"]:focus,
 
     .matchover-stage {
         gap: 20px;
+    }
+
+    .game-brand {
+        top: 8px;
+        left: 10px;
+        padding: 6px 11px 6px 8px;
+        gap: 7px;
+    }
+
+    .game-brand-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .game-brand-text {
+        font-size: 11px;
+    }
+}
+
+/* ---------- Extra-small phones (iPhone SE / older Android widths) ---------- */
+
+@media (max-width: 380px) {
+    :root { --px-size: 9px; }
+
+    .panel {
+        padding: 16px 12px;
+    }
+
+    h1 { font-size: 15px; }
+
+    .choice-btn {
+        font-size: 13px;
+        padding: 12px 10px;
+    }
+
+    .timer-top {
+        width: 40px;
+        height: 40px;
+        font-size: 15px;
+    }
+
+    .round-counter {
+        font-size: 8px;
+    }
+
+    .character-stage-sm {
+        width: 84px;
+        --px-size: 6px;
+    }
+
+    .game-brand {
+        padding: 5px 10px 5px 7px;
+        gap: 6px;
+    }
+
+    .game-brand-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    .game-brand-text {
+        font-size: 10px;
     }
 }

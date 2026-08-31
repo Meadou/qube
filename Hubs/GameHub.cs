@@ -80,7 +80,92 @@ public class GameHub : Hub
         await _hubContext.Clients.Client(id1).SendAsync("MatchFound", room.Id, p2.Name, p2.Character, p1.HP, p2.HP);
         await _hubContext.Clients.Client(id2).SendAsync("MatchFound", room.Id, p1.Name, p1.Character, p2.HP, p1.HP);
 
-        await SendNextQuestion(room);
+        // The quiz doesn't start yet — both players need to click "I'm Ready" first (see PlayerReady).
+    }
+
+    // ---------- Private rooms ----------
+
+    public async Task CreatePrivateRoom()
+    {
+        if (!_rooms.LobbyPlayers.ContainsKey(Context.ConnectionId)) return;
+        var code = _rooms.CreatePrivateRoomCode(Context.ConnectionId);
+        await Clients.Caller.SendAsync("PrivateRoomCreated", code);
+    }
+
+    public Task CancelPrivateRoom(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            _rooms.CancelPrivateRoomCode(code.Trim().ToUpperInvariant());
+        }
+        return Task.CompletedTask;
+    }
+
+    public async Task JoinPrivateRoom(string code)
+    {
+        var normalized = (code ?? "").Trim().ToUpperInvariant();
+        if (string.IsNullOrEmpty(normalized))
+        {
+            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "empty");
+            return;
+        }
+
+        if (!_rooms.TryConsumePrivateRoomCode(normalized, out var creatorId) || creatorId == null)
+        {
+            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "not-found");
+            return;
+        }
+
+        if (creatorId == Context.ConnectionId)
+        {
+            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "self");
+            return;
+        }
+
+        if (!_rooms.LobbyPlayers.TryGetValue(creatorId, out var p1) ||
+            !_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var p2))
+        {
+            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "opponent-left");
+            return;
+        }
+
+        if (_quiz.Count == 0)
+        {
+            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "no-questions");
+            return;
+        }
+
+        var room = _rooms.CreateRoom(p1, p2, _quiz.GetShuffledQuestions());
+
+        await _hubContext.Groups.AddToGroupAsync(p1.ConnectionId, room.Id);
+        await _hubContext.Groups.AddToGroupAsync(p2.ConnectionId, room.Id);
+        await _hubContext.Groups.RemoveFromGroupAsync(p1.ConnectionId, "Lobby");
+        await _hubContext.Groups.RemoveFromGroupAsync(p2.ConnectionId, "Lobby");
+
+        await _hubContext.Clients.Client(p1.ConnectionId).SendAsync("MatchFound", room.Id, p2.Name, p2.Character, p1.HP, p2.HP);
+        await _hubContext.Clients.Client(p2.ConnectionId).SendAsync("MatchFound", room.Id, p1.Name, p1.Character, p2.HP, p1.HP);
+
+        // Same "both click ready" flow as random matchmaking (see PlayerReady) — no special-casing needed here.
+    }
+
+    public async Task PlayerReady(string roomId)
+    {
+        if (!_rooms.Rooms.TryGetValue(roomId, out var room)) return;
+
+        bool bothReady;
+        lock (room.Lock)
+        {
+            if (Context.ConnectionId == room.Player1.ConnectionId) room.Player1Ready = true;
+            else if (Context.ConnectionId == room.Player2.ConnectionId) room.Player2Ready = true;
+            bothReady = room.Player1Ready && room.Player2Ready;
+        }
+
+        await _hubContext.Clients.Group(roomId).SendAsync("ReadyUpdate", Context.ConnectionId);
+
+        if (bothReady)
+        {
+            await SendNextQuestion(room);
+        }
     }
 
     public void CancelMatchRequest()
@@ -148,7 +233,7 @@ public class GameHub : Hub
             token = room.RoundTimeoutCts.Token;
         }
 
-        await _hubContext.Clients.Group(room.Id).SendAsync("NewQuestion", room.CurrentQuestionIndex, question.Text, question.Choices);
+        await _hubContext.Clients.Group(room.Id).SendAsync("NewQuestion", room.CurrentQuestionIndex, question.Text, question.Choices, RoundTimeoutSeconds);
 
         _ = Task.Run(async () =>
         {
@@ -237,10 +322,13 @@ public class GameHub : Hub
             }
         }
 
+        int p1OpponentChoice = p2Answer?.ChoiceIndex ?? -1;
+        int p2OpponentChoice = p1Answer?.ChoiceIndex ?? -1;
+
         await _hubContext.Clients.Client(room.Player1.ConnectionId).SendAsync(
-            "RoundResult", question.CorrectIndex, p1Outcome, room.Player1.HP, room.Player2.HP);
+            "RoundResult", question.CorrectIndex, p1Outcome, room.Player1.HP, room.Player2.HP, p1OpponentChoice, DamagePerHit);
         await _hubContext.Clients.Client(room.Player2.ConnectionId).SendAsync(
-            "RoundResult", question.CorrectIndex, p2Outcome, room.Player2.HP, room.Player1.HP);
+            "RoundResult", question.CorrectIndex, p2Outcome, room.Player2.HP, room.Player1.HP, p2OpponentChoice, DamagePerHit);
 
         if (room.Player1.HP <= 0 || room.Player2.HP <= 0)
         {
@@ -260,12 +348,70 @@ public class GameHub : Hub
 
     private async Task EndMatch(GameRoom room, string? winnerName)
     {
+        lock (room.Lock)
+        {
+            room.Finished = true;
+        }
+
         await _hubContext.Clients.Group(room.Id).SendAsync("MatchOver", winnerName);
+
+        // The room is intentionally NOT removed here — it's kept alive in case both
+        // players request a rematch (see RequestRematch). It's cleaned up once either
+        // player heads back to the lobby (LeaveToLobby) or disconnects.
+    }
+
+    public async Task RequestRematch(string roomId)
+    {
+        if (!_rooms.Rooms.TryGetValue(roomId, out var room)) return;
+        if (!room.Finished) return; // safety: only valid once a match has actually ended
+        if (_quiz.Count == 0) return;
+
+        bool bothWant;
+        lock (room.Lock)
+        {
+            room.RematchRequests.Add(Context.ConnectionId);
+            bothWant = room.RematchRequests.Contains(room.Player1.ConnectionId)
+                       && room.RematchRequests.Contains(room.Player2.ConnectionId);
+        }
+
+        await _hubContext.Clients.Group(roomId).SendAsync("RematchRequested", Context.ConnectionId);
+
+        if (!bothWant) return;
+
+        lock (room.Lock)
+        {
+            room.Player1.HP = 100;
+            room.Player2.HP = 100;
+            room.CurrentQuestionIndex = -1;
+            room.Questions = _quiz.GetShuffledQuestions();
+            room.CurrentAnswers.Clear();
+            room.RoundTimeoutCts = null;
+            room.Player1Ready = false;
+            room.Player2Ready = false;
+            room.Finished = false;
+            room.RematchRequests.Clear();
+        }
+
+        await _hubContext.Clients.Client(room.Player1.ConnectionId).SendAsync(
+            "MatchFound", room.Id, room.Player2.Name, room.Player2.Character, room.Player1.HP, room.Player2.HP);
+        await _hubContext.Clients.Client(room.Player2.ConnectionId).SendAsync(
+            "MatchFound", room.Id, room.Player1.Name, room.Player1.Character, room.Player2.HP, room.Player1.HP);
+    }
+
+    public async Task LeaveToLobby(string roomId)
+    {
+        if (!_rooms.Rooms.TryGetValue(roomId, out var room)) return;
+
+        var otherId = Context.ConnectionId == room.Player1.ConnectionId
+            ? room.Player2.ConnectionId
+            : room.Player1.ConnectionId;
+
+        // Let the other player know, in case they're still sitting on the match-over
+        // screen waiting for a rematch that's no longer coming.
+        await _hubContext.Clients.Client(otherId).SendAsync("OpponentLeftMatch");
 
         room.Player1.RoomId = null;
         room.Player2.RoomId = null;
-        room.Player1.HP = 100;
-        room.Player2.HP = 100;
 
         await _hubContext.Groups.RemoveFromGroupAsync(room.Player1.ConnectionId, room.Id);
         await _hubContext.Groups.RemoveFromGroupAsync(room.Player2.ConnectionId, room.Id);
@@ -284,7 +430,18 @@ public class GameHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _rooms.RemovePlayer(Context.ConnectionId);
+        var id = Context.ConnectionId;
+        _rooms.RemovePlayer(id);
+
+        var room = _rooms.Rooms.Values.FirstOrDefault(r => r.Player1.ConnectionId == id || r.Player2.ConnectionId == id);
+        if (room != null)
+        {
+            var otherId = room.Player1.ConnectionId == id ? room.Player2.ConnectionId : room.Player1.ConnectionId;
+            await _hubContext.Clients.Client(otherId).SendAsync("OpponentLeftMatch");
+            await _hubContext.Groups.AddToGroupAsync(otherId, "Lobby");
+            _rooms.RemoveRoom(room.Id);
+        }
+
         await BroadcastLobbyPlayers();
         await base.OnDisconnectedAsync(exception);
     }

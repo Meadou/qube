@@ -8,6 +8,36 @@
 </head>
 <body>
 
+    <div class="game-brand" aria-hidden="true">
+        <svg class="game-brand-icon" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
+            <rect class="bolt-top" fill="#00e5ff" x="8" y="0" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="10" y="0" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="6" y="2" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="8" y="2" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="4" y="4" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="6" y="4" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="2" y="6" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="4" y="6" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="6" y="6" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="8" y="6" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="10" y="6" width="2" height="2"/>
+            <rect class="bolt-top" fill="#00e5ff" x="12" y="6" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="4" y="8" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="6" y="8" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="8" y="8" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="10" y="8" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="6" y="10" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="8" y="10" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="4" y="12" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="6" y="12" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="2" y="14" width="2" height="2"/>
+            <rect class="bolt-bottom" fill="#ff2f92" x="4" y="14" width="2" height="2"/>
+        </svg>
+        <span class="game-brand-text">
+            <span class="word-brain">BRAIN</span><span class="word-brawl">BRAWL</span>
+        </span>
+    </div>
+
     <!-- ===================== LOGIN ===================== -->
     <section id="screen-login" class="screen active">
         <div class="panel">
@@ -45,6 +75,23 @@
                     <ul id="lobby-player-list"></ul>
                     <button id="find-match-btn" class="btn btn-primary">Find Match</button>
                     <p id="match-status" class="status-text"></p>
+
+                    <div class="private-room-divider"><span>or play privately</span></div>
+
+                    <div id="private-room-controls" class="private-room-controls">
+                        <button id="create-private-btn" class="btn">Create Private Room</button>
+                        <form id="join-private-form" class="private-room-join-form">
+                            <input type="text" id="private-room-code-input" placeholder="Enter code" maxlength="6" autocomplete="off">
+                            <button type="submit" class="btn">Join</button>
+                        </form>
+                    </div>
+
+                    <div id="private-room-waiting" class="private-room-waiting hidden">
+                        <p class="private-room-label">Share this code with a friend:</p>
+                        <div id="private-room-code-display" class="private-room-code-display" title="Click to copy"></div>
+                        <p class="status-text">Waiting for them to join...</p>
+                        <button id="cancel-private-btn" class="btn">Cancel</button>
+                    </div>
                 </div>
 
                 <div class="lobby-chat">
@@ -88,7 +135,12 @@
             </div>
 
             <div class="quiz-container">
-                <h3 id="question-text">Waiting for question...</h3>
+                <div id="ready-panel" class="ready-panel">
+                    <h3 class="ready-title">Get Ready</h3>
+                    <p id="ready-status-text" class="ready-status-text">Click ready when you're set to start.</p>
+                    <button id="ready-btn" class="btn btn-primary">I'm Ready!</button>
+                </div>
+                <h3 id="question-text" class="hidden">Waiting for question...</h3>
                 <div id="choices-container" class="choices-container"></div>
             </div>
         </div>
@@ -100,10 +152,14 @@
             <h2 id="matchover-title" class="matchover-title">Match Over</h2>
             <p id="matchover-sub" class="matchover-sub"></p>
             <div class="matchover-stage">
-                <div id="matchover-my-container" class="character-stage" style="width:110px;"></div>
-                <div id="matchover-opp-container" class="character-stage" style="width:110px;"></div>
+                <div id="matchover-my-container" class="character-stage character-stage-sm"></div>
+                <div id="matchover-opp-container" class="character-stage character-stage-sm"></div>
             </div>
-            <button id="matchover-continue-btn" class="btn btn-primary">Back to Lobby</button>
+            <p id="matchover-rematch-status" class="matchover-rematch-status"></p>
+            <div class="matchover-actions">
+                <button id="matchover-rematch-btn" class="btn btn-primary">Rematch</button>
+                <button id="matchover-continue-btn" class="btn">Back to Lobby</button>
+            </div>
         </div>
     </section>
 

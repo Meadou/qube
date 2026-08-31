@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\mary ann pamilar\\OneDrive\\Desktop\\USEP\\Programming\\My Projects\\qube\\qube.csproj": {}
+    "D:\\Web Codes\\Brain Brawl\\qube.csproj": {}
   },
   "projects": {
-    "C:\\Users\\mary ann pamilar\\OneDrive\\Desktop\\USEP\\Programming\\My Projects\\qube\\qube.csproj": {
+    "D:\\Web Codes\\Brain Brawl\\qube.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\mary ann pamilar\\OneDrive\\Desktop\\USEP\\Programming\\My Projects\\qube\\qube.csproj",
+        "projectUniqueName": "D:\\Web Codes\\Brain Brawl\\qube.csproj",
         "projectName": "qube",
-        "projectPath": "C:\\Users\\mary ann pamilar\\OneDrive\\Desktop\\USEP\\Programming\\My Projects\\qube\\qube.csproj",
-        "packagesPath": "C:\\Users\\mary ann pamilar\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\mary ann pamilar\\OneDrive\\Desktop\\USEP\\Programming\\My Projects\\qube\\obj\\",
+        "projectPath": "D:\\Web Codes\\Brain Brawl\\qube.csproj",
+        "packagesPath": "C:\\Users\\KEN\\.nuget\\packages\\",
+        "outputPath": "D:\\Web Codes\\Brain Brawl\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\mary ann pamilar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\KEN\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -39,7 +39,7 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.300"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0": {
@@ -64,7 +64,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.303/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

@@ -6,6 +6,8 @@ let roundTimerInterval = null;
 let currentRoundTimeSeconds = 15;
 let lastOpponentName = '';
 let lastOpponentConfig = null;
+let iAmReady = false;
+let opponentIsReady = false;
 
 function startMatch(roomId, opponentName, opponentConfig, myHP, opponentHP) {
     currentRoomId = roomId;
@@ -29,9 +31,25 @@ function startMatch(roomId, opponentName, opponentConfig, myHP, opponentHP) {
     opponentCharacter = new CubeCharacter(oppContainer, opponentConfig, 'player-right');
 
     updateHP(myHP, opponentHP);
-    document.getElementById('question-text').textContent = 'Get ready...';
-    document.getElementById('choices-container').innerHTML = '';
+    resetReadyPanel();
     updateTimerDisplay(currentRoundTimeSeconds);
+}
+
+function resetReadyPanel() {
+    iAmReady = false;
+    opponentIsReady = false;
+    const readyPanel = document.getElementById('ready-panel');
+    const questionText = document.getElementById('question-text');
+    const readyBtn = document.getElementById('ready-btn');
+    const statusText = document.getElementById('ready-status-text');
+
+    readyPanel.classList.remove('hidden');
+    questionText.classList.add('hidden');
+    document.getElementById('choices-container').innerHTML = '';
+    readyBtn.disabled = false;
+    readyBtn.textContent = "I'm Ready!";
+    readyBtn.classList.remove('ready-btn-taken');
+    statusText.textContent = "Click ready when you're set to start.";
 }
 
 function startRoundTimer() {
@@ -72,8 +90,44 @@ window.hubConnection.on('MatchFound', (roomId, opponentName, opponentConfig, myH
     startMatch(roomId, opponentName, opponentConfig, myHP, opponentHP);
 });
 
+document.getElementById('ready-btn').addEventListener('click', () => {
+    if (iAmReady) return;
+    const readyBtn = document.getElementById('ready-btn');
+    readyBtn.disabled = true;
+    readyBtn.textContent = 'Readying...';
+    document.getElementById('ready-status-text').textContent = 'Confirming with server...';
+
+    window.hubConnection.invoke('PlayerReady', currentRoomId).catch((err) => {
+        console.error('PlayerReady failed:', err);
+        readyBtn.disabled = false;
+        readyBtn.textContent = "I'm Ready!";
+        document.getElementById('ready-status-text').textContent =
+            "Couldn't reach the server — check your connection and try again.";
+    });
+});
+
+window.hubConnection.on('ReadyUpdate', (connectionId) => {
+    const statusText = document.getElementById('ready-status-text');
+    const readyBtn = document.getElementById('ready-btn');
+
+    if (connectionId === window.hubConnection.connectionId) {
+        // The server has now confirmed MY ready click actually went through —
+        // only now do we lock the button in, instead of assuming success up front.
+        iAmReady = true;
+        readyBtn.disabled = true;
+        readyBtn.textContent = 'Ready ✓';
+        readyBtn.classList.add('ready-btn-taken');
+        statusText.textContent = opponentIsReady ? 'Both ready — starting!' : 'Waiting for opponent...';
+    } else {
+        opponentIsReady = true;
+        statusText.textContent = iAmReady ? 'Both ready — starting!' : 'Opponent is ready — your turn!';
+    }
+});
+
 window.hubConnection.on('NewQuestion', (index, text, choices, roundTimeSeconds) => {
     hasAnsweredThisRound = false;
+    document.getElementById('ready-panel').classList.add('hidden');
+    document.getElementById('question-text').classList.remove('hidden');
     if (roundTimeSeconds) currentRoundTimeSeconds = roundTimeSeconds;
     document.getElementById('question-text').textContent = text;
     document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
@@ -197,6 +251,12 @@ function showMatchOver(winnerName) {
     new CubeCharacter(oppBox, lastOpponentConfig || {}, 'player-right');
 
     document.getElementById('match-status').textContent = '';
+
+    const rematchBtn = document.getElementById('matchover-rematch-btn');
+    rematchBtn.disabled = false;
+    rematchBtn.textContent = 'Rematch';
+    document.getElementById('matchover-rematch-status').textContent = '';
+
     showScreen('matchover');
 }
 
@@ -215,7 +275,44 @@ function spawnConfetti() {
     }
 }
 
+document.getElementById('matchover-rematch-btn').addEventListener('click', () => {
+    const rematchBtn = document.getElementById('matchover-rematch-btn');
+    rematchBtn.disabled = true;
+    rematchBtn.textContent = 'Waiting...';
+    document.getElementById('matchover-rematch-status').textContent =
+        `Waiting for ${lastOpponentName} to accept...`;
+    window.hubConnection.invoke('RequestRematch', currentRoomId);
+});
+
+window.hubConnection.on('RematchRequested', (connectionId) => {
+    if (connectionId === window.hubConnection.connectionId) return;
+    document.getElementById('matchover-rematch-status').textContent =
+        `${lastOpponentName} wants a rematch! Click Rematch to accept.`;
+});
+
+window.hubConnection.on('OpponentLeftMatch', () => {
+    stopRoundTimer();
+    const titleEl = document.getElementById('matchover-title');
+    const subEl = document.getElementById('matchover-sub');
+    titleEl.classList.remove('win', 'lose', 'draw');
+    titleEl.classList.add('draw');
+    titleEl.textContent = 'Opponent Left';
+    subEl.textContent = `${lastOpponentName || 'Your opponent'} returned to the lobby.`;
+    document.getElementById('matchover-rematch-status').textContent = '';
+    document.getElementById('matchover-rematch-btn').classList.add('hidden');
+    showScreen('matchover');
+    setTimeout(() => {
+        document.getElementById('matchover-rematch-btn').classList.remove('hidden');
+        resetPrivateRoomUI();
+        showScreen('lobby');
+    }, 1800);
+});
+
 document.getElementById('matchover-continue-btn').addEventListener('click', () => {
+    if (currentRoomId) {
+        window.hubConnection.invoke('LeaveToLobby', currentRoomId);
+    }
+    resetPrivateRoomUI();
     showScreen('lobby');
 });
 
