@@ -3,46 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qube - Speed Quiz Arena</title>
+    <title>QuBe: Speed Quiz Arena</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <div class="game-brand" aria-hidden="true">
+    <header class="game-brand" aria-hidden="true">
         <svg class="game-brand-icon" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
-            <rect class="bolt-top" fill="#00e5ff" x="8" y="0" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="10" y="0" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="6" y="2" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="8" y="2" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="4" y="4" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="6" y="4" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="2" y="6" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="4" y="6" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="6" y="6" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="8" y="6" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="10" y="6" width="2" height="2"/>
-            <rect class="bolt-top" fill="#00e5ff" x="12" y="6" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="4" y="8" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="6" y="8" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="8" y="8" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="10" y="8" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="6" y="10" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="8" y="10" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="4" y="12" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="6" y="12" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="2" y="14" width="2" height="2"/>
-            <rect class="bolt-bottom" fill="#ff2f92" x="4" y="14" width="2" height="2"/>
+            <rect x="8" y="0" width="2" height="2"/>
+            <rect x="10" y="0" width="2" height="2"/>
+            <rect x="6" y="2" width="2" height="2"/>
+            <rect x="8" y="2" width="2" height="2"/>
+            <rect x="4" y="4" width="2" height="2"/>
+            <rect x="6" y="4" width="2" height="2"/>
+            <rect x="2" y="6" width="2" height="2"/>
+            <rect x="4" y="6" width="2" height="2"/>
+            <rect x="6" y="6" width="2" height="2"/>
+            <rect x="8" y="6" width="2" height="2"/>
+            <rect x="10" y="6" width="2" height="2"/>
+            <rect x="12" y="6" width="2" height="2"/>
+            <rect x="4" y="8" width="2" height="2"/>
+            <rect x="6" y="8" width="2" height="2"/>
+            <rect x="8" y="8" width="2" height="2"/>
+            <rect x="10" y="8" width="2" height="2"/>
+            <rect x="6" y="10" width="2" height="2"/>
+            <rect x="8" y="10" width="2" height="2"/>
+            <rect x="4" y="12" width="2" height="2"/>
+            <rect x="6" y="12" width="2" height="2"/>
+            <rect x="2" y="14" width="2" height="2"/>
+            <rect x="4" y="14" width="2" height="2"/>
         </svg>
-        <span class="game-brand-text">
-            <span class="word-brain">BRAIN</span><span class="word-brawl">BRAWL</span>
-        </span>
-    </div>
+        <span class="game-brand-text">QuBe</span>
+    </header>
+
+    <main id="app">
 
     <!-- ===================== LOGIN ===================== -->
     <section id="screen-login" class="screen active">
         <div class="panel">
-            <h1>Qube</h1>
-            <p class="subtitle">Speed Quiz Arena</p>
+            <h1>QuBe</h1>
+            <p class="subtitle">Real-time 1v1 quiz duels.</p>
             <form id="login-form">
                 <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="16" required>
                 <button type="submit" class="btn btn-primary">Continue</button>
@@ -53,14 +57,14 @@
     <!-- ===================== CUSTOMIZE ===================== -->
     <section id="screen-customize" class="screen">
         <div class="panel">
-            <h2>Customize Your Character</h2>
+            <h2>Customize your fighter</h2>
             <div id="customize-preview" class="character-stage"></div>
 
             <div class="color-controls">
-                <label>Body Color <input type="color" id="color-body" value="#ffffff"></label>
+                <label>Body color <input type="color" id="color-body" value="#ffffff"></label>
             </div>
 
-            <button id="confirm-character-btn" class="btn btn-primary">Enter Lobby</button>
+            <button id="confirm-character-btn" class="btn btn-primary">Enter lobby</button>
         </div>
     </section>
 
@@ -71,15 +75,15 @@
 
             <div class="lobby-grid">
                 <div class="lobby-players">
-                    <h3>Players Online</h3>
+                    <h3>Players online</h3>
                     <ul id="lobby-player-list"></ul>
-                    <button id="find-match-btn" class="btn btn-primary">Find Match</button>
+                    <button id="find-match-btn" class="btn btn-primary">Find match</button>
                     <p id="match-status" class="status-text"></p>
 
                     <div class="private-room-divider"><span>or play privately</span></div>
 
                     <div id="private-room-controls" class="private-room-controls">
-                        <button id="create-private-btn" class="btn">Create Private Room</button>
+                        <button id="create-private-btn" class="btn">Create private room</button>
                         <form id="join-private-form" class="private-room-join-form">
                             <input type="text" id="private-room-code-input" placeholder="Enter code" maxlength="6" autocomplete="off">
                             <button type="submit" class="btn">Join</button>
@@ -95,7 +99,7 @@
                 </div>
 
                 <div class="lobby-chat">
-                    <h3>Global Chat</h3>
+                    <h3>Global chat</h3>
                     <div id="chat-messages" class="chat-messages"></div>
                     <form id="chat-form" class="chat-form">
                         <input type="text" id="chat-input" placeholder="Say something..." maxlength="200" autocomplete="off">
@@ -113,7 +117,10 @@
             <div class="match-header">
                 <div id="round-counter" class="round-counter">ROUND 1</div>
                 <div id="timer-display" class="timer-top">15</div>
-                <button id="sound-toggle-btn" class="sound-toggle" type="button" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+                <button id="sound-toggle-btn" class="sound-toggle" type="button" title="Toggle sound" aria-label="Toggle sound">
+                    <svg id="sound-icon-on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4zm11.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM13 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    <svg id="sound-icon-off" class="hidden" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                </button>
             </div>
 
             <div class="arena">
@@ -136,9 +143,9 @@
 
             <div class="quiz-container">
                 <div id="ready-panel" class="ready-panel">
-                    <h3 class="ready-title">Get Ready</h3>
+                    <h3 class="ready-title">Get ready</h3>
                     <p id="ready-status-text" class="ready-status-text">Click ready when you're set to start.</p>
-                    <button id="ready-btn" class="btn btn-primary">I'm Ready!</button>
+                    <button id="ready-btn" class="btn btn-primary">I'm ready!</button>
                 </div>
                 <h3 id="question-text" class="hidden">Waiting for question...</h3>
                 <div id="choices-container" class="choices-container"></div>
@@ -149,7 +156,7 @@
     <!-- ===================== MATCH OVER ===================== -->
     <section id="screen-matchover" class="screen">
         <div class="panel">
-            <h2 id="matchover-title" class="matchover-title">Match Over</h2>
+            <h2 id="matchover-title" class="matchover-title">Match over</h2>
             <p id="matchover-sub" class="matchover-sub"></p>
             <div class="matchover-stage">
                 <div id="matchover-my-container" class="character-stage character-stage-sm"></div>
@@ -158,10 +165,12 @@
             <p id="matchover-rematch-status" class="matchover-rematch-status"></p>
             <div class="matchover-actions">
                 <button id="matchover-rematch-btn" class="btn btn-primary">Rematch</button>
-                <button id="matchover-continue-btn" class="btn">Back to Lobby</button>
+                <button id="matchover-continue-btn" class="btn">Back to lobby</button>
             </div>
         </div>
     </section>
+
+    </main>
 
     <!-- SignalR client library (loaded locally, same-origin) -->
     <script src="signalr.min.js"></script>

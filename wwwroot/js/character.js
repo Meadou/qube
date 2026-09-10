@@ -1,6 +1,6 @@
 // Renders a simple flat 2D pixel-art sprite: a 9x11 grid where
 // 'K' = black outline/eyes, 'F' = the player's chosen body color, '.' = empty.
-// Movement/attack/hurt are done by toggling CSS classes — see css/style.css.
+// Movement, attack, and hurt are done by toggling CSS classes; see css/style.css.
 const SPRITE_ROWS = [
     "..KKKKKK..",
     ".KFFFFFFK.",
@@ -16,7 +16,7 @@ const SPRITE_ROWS = [
 ];
 
 class CubeCharacter {
-    // side: 'player-left' or 'player-right' — controls which way "attack" lunges
+    // side: 'player-left' or 'player-right'. Controls which way "attack" lunges
     constructor(container, config, side) {
         this.container = container;
         this.side = side;
@@ -31,7 +31,7 @@ class CubeCharacter {
         // data directly, rather than flipping the whole grid with a CSS
         // transform: scaleX(-1). The transform approach left visible hairline
         // seams between adjacent grid cells (a sub-pixel rounding artifact
-        // browsers introduce when rasterizing a flipped grid) — mirroring the
+        // browsers introduce when rasterizing a flipped grid. Mirroring the
         // actual pixel order sidesteps that entirely, since each cell just
         // renders in its true (already-mirrored) position with no transform.
         const rows = side === 'player-right'

@@ -21,7 +21,7 @@ window.hubConnection.on('QueueStatus', (status) => {
     if (status === 'waiting') {
         statusEl.textContent = 'Waiting for an opponent...';
     } else if (status === 'no-questions') {
-        statusEl.textContent = 'No quiz questions loaded yet — ask the admin to add some.';
+        statusEl.textContent = 'No quiz questions loaded yet. Ask the admin to add some.';
     } else {
         statusEl.textContent = '';
     }
@@ -79,7 +79,7 @@ document.getElementById('private-room-code-display').addEventListener('click', a
         el.textContent = 'Copied!';
         setTimeout(() => { el.textContent = original; }, 1000);
     } catch (e) {
-        // Clipboard API unavailable (e.g. non-HTTPS context) — the code is
+        // Clipboard API unavailable (e.g. non-HTTPS context). The code is
         // still fully visible to read and share manually, so just no-op.
     }
 });
@@ -100,9 +100,9 @@ document.getElementById('join-private-form').addEventListener('submit', (e) => {
 window.hubConnection.on('PrivateRoomJoinFailed', (reason) => {
     const messages = {
         'not-found': "That code doesn't exist or the room already started.",
-        'self': "That's your own room code — share it with a friend instead of joining it yourself.",
+        'self': "That's your own room code. Share it with a friend instead of joining it yourself.",
         'opponent-left': 'The player who created that room is no longer available.',
-        'no-questions': 'No quiz questions loaded yet — ask the admin to add some.',
+        'no-questions': 'No quiz questions loaded yet. Ask the admin to add some.',
         'empty': 'Enter a room code first.',
     };
     document.getElementById('match-status').textContent = messages[reason] || 'Could not join that room.';

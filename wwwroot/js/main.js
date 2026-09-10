@@ -36,8 +36,12 @@ function escapeHtml(str) {
 }
 
 const soundToggleBtn = document.getElementById('sound-toggle-btn');
+const soundIconOn = document.getElementById('sound-icon-on');
+const soundIconOff = document.getElementById('sound-icon-off');
 function refreshSoundIcon() {
-    soundToggleBtn.textContent = GameSound.isMuted() ? '🔇' : '🔊';
+    const muted = GameSound.isMuted();
+    soundIconOn.classList.toggle('hidden', muted);
+    soundIconOff.classList.toggle('hidden', !muted);
 }
 refreshSoundIcon();
 soundToggleBtn.addEventListener('click', () => {

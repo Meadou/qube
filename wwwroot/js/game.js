@@ -102,7 +102,7 @@ document.getElementById('ready-btn').addEventListener('click', () => {
         readyBtn.disabled = false;
         readyBtn.textContent = "I'm Ready!";
         document.getElementById('ready-status-text').textContent =
-            "Couldn't reach the server — check your connection and try again.";
+            "Couldn't reach the server. Check your connection and try again.";
     });
 });
 
@@ -111,16 +111,16 @@ window.hubConnection.on('ReadyUpdate', (connectionId) => {
     const readyBtn = document.getElementById('ready-btn');
 
     if (connectionId === window.hubConnection.connectionId) {
-        // The server has now confirmed MY ready click actually went through —
-        // only now do we lock the button in, instead of assuming success up front.
+        // The server has now confirmed my ready click actually went through.
+        // Only now do we lock the button in, instead of assuming success up front.
         iAmReady = true;
         readyBtn.disabled = true;
-        readyBtn.textContent = 'Ready ✓';
+        readyBtn.textContent = 'Ready';
         readyBtn.classList.add('ready-btn-taken');
-        statusText.textContent = opponentIsReady ? 'Both ready — starting!' : 'Waiting for opponent...';
+        statusText.textContent = opponentIsReady ? 'Both ready. Starting.' : 'Waiting for opponent...';
     } else {
         opponentIsReady = true;
-        statusText.textContent = iAmReady ? 'Both ready — starting!' : 'Opponent is ready — your turn!';
+        statusText.textContent = iAmReady ? 'Both ready. Starting.' : 'Opponent is ready. Your turn.';
     }
 });
 
@@ -261,7 +261,7 @@ function showMatchOver(winnerName) {
 }
 
 function spawnConfetti() {
-    const colors = ['#00e5ff', '#ff2f92', '#39ff88', '#ffd24d', '#f2effa'];
+    const colors = ['#f2a93b', '#ffc266', '#3ddc84', '#f0eee9', '#9c98a3'];
     const count = 28;
     for (let i = 0; i < count; i++) {
         const piece = document.createElement('div');
