@@ -36,6 +36,18 @@ public class GameHub : Hub
         await BroadcastLobbyPlayers();
     }
 
+    // Lets a player change their fighter color from the lobby without
+    // re-joining. Only affects the lobby record; a match already in
+    // progress keeps whatever character each side had at match start.
+    public Task UpdateCharacter(CharacterConfig character)
+    {
+        if (_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var player))
+        {
+            player.Character = character;
+        }
+        return Task.CompletedTask;
+    }
+
     public async Task SendChatMessage(string message)
     {
         if (string.IsNullOrWhiteSpace(message)) return;
@@ -44,10 +56,501 @@ public class GameHub : Hub
         await _hubContext.Clients.Group("Lobby").SendAsync("ReceiveChatMessage", player.Name, message);
     }
 
+    // ---------- Code-based group rooms ----------
+
+    public async Task CreateGroupRoom()
+    {
+        if (!_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var player))
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "not-in-lobby");
+            return;
+        }
+        if (player.RoomId != null)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "in-duel");
+            return;
+        }
+
+        await LeaveRoomCore(Context.ConnectionId);
+        var room = _rooms.CreateGroupRoom();
+        lock (room.Lock)
+        {
+            room.Members.Add(Context.ConnectionId);
+            room.HostConnectionId = Context.ConnectionId;
+        }
+        await _hubContext.Groups.AddToGroupAsync(Context.ConnectionId, GroupName(room));
+        await Clients.Caller.SendAsync("RoomEntered", room.Code);
+        await BroadcastRoom(room);
+    }
+
+    public async Task JoinGroupRoom(string code)
+    {
+        var normalized = (code ?? "").Trim().ToUpperInvariant();
+        if (normalized.Length == 0)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "empty");
+            return;
+        }
+        if (!_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var player))
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "not-in-lobby");
+            return;
+        }
+        if (player.RoomId != null)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "in-duel");
+            return;
+        }
+        if (!_rooms.GroupRooms.TryGetValue(normalized, out var room))
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "room-not-found");
+            return;
+        }
+
+        // Validate BEFORE leaving any current room, so a typo never kicks you out.
+        var current = _rooms.FindGroupRoom(Context.ConnectionId);
+        if (current != null && current.Code != room.Code)
+        {
+            await LeaveRoomCore(Context.ConnectionId);
+        }
+
+        string? error = null;
+        bool newlyJoined = false;
+        lock (room.Lock)
+        {
+            if (room.Members.Contains(Context.ConnectionId))
+            {
+                // already in this room: just re-enter it
+            }
+            else if (room.Started)
+            {
+                error = "game-started";
+            }
+            else if (room.Members.Count >= GroupQuizRoom.Capacity)
+            {
+                error = "room-full";
+            }
+            else
+            {
+                room.Members.Add(Context.ConnectionId);
+                newlyJoined = true;
+            }
+        }
+
+        if (error != null)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", error);
+            return;
+        }
+
+        await _hubContext.Groups.AddToGroupAsync(Context.ConnectionId, GroupName(room));
+        await Clients.Caller.SendAsync("RoomEntered", room.Code);
+        if (newlyJoined)
+        {
+            await _hubContext.Clients.Group(GroupName(room))
+                .SendAsync("RoomMemberJoined", player.Name, Context.ConnectionId);
+        }
+        await BroadcastRoom(room);
+    }
+
+    public async Task SitInGroupChair(int seatNumber)
+    {
+        var room = _rooms.FindGroupRoom(Context.ConnectionId);
+        if (room == null || !_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var player))
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "not-in-room");
+            return;
+        }
+        if (seatNumber < 1 || seatNumber > GroupQuizRoom.Capacity)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "invalid-seat");
+            return;
+        }
+
+        string? error = null;
+        lock (room.Lock)
+        {
+            if (room.Started)
+            {
+                error = "game-started";
+            }
+            else if (room.Seats[seatNumber - 1] != null)
+            {
+                error = "seat-taken";
+            }
+            else
+            {
+                // Moving to another chair is allowed: free the old one first.
+                var old = Array.FindIndex(room.Seats, s => s?.Player.ConnectionId == Context.ConnectionId);
+                if (old >= 0) room.Seats[old] = null;
+                room.Seats[seatNumber - 1] = new GroupQuizSeat { Player = player, SeatNumber = seatNumber };
+            }
+        }
+
+        if (error != null)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", error);
+            return;
+        }
+        await BroadcastRoom(room);
+    }
+
+    public async Task LeaveGroupChair()
+    {
+        var room = _rooms.FindGroupRoom(Context.ConnectionId);
+        if (room == null) return;
+        lock (room.Lock)
+        {
+            if (room.Started) return;
+            var idx = Array.FindIndex(room.Seats, s => s?.Player.ConnectionId == Context.ConnectionId);
+            if (idx >= 0) room.Seats[idx] = null;
+        }
+        await BroadcastRoom(room);
+    }
+
+    public Task LeaveGroupRoom() => LeaveRoomCore(Context.ConnectionId);
+
+    public async Task StartGroupGame()
+    {
+        if (_quiz.Count == 0)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "no-questions");
+            return;
+        }
+
+        var groupRoom = _rooms.FindGroupRoom(Context.ConnectionId);
+        if (groupRoom == null)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", "not-in-room");
+            return;
+        }
+        string? error = null;
+        lock (groupRoom.Lock)
+        {
+            var seatedPlayers = groupRoom.Seats.Count(seat => seat != null);
+            if (groupRoom.HostConnectionId != Context.ConnectionId)
+            {
+                error = "not-host";
+            }
+            else if (seatedPlayers < 2)
+            {
+                error = "not-enough-players";
+            }
+            else if (groupRoom.Started)
+            {
+                error = "game-started";
+            }
+            else
+            {
+                groupRoom.Started = true;
+                groupRoom.Finished = false;
+                groupRoom.Questions = _quiz.GetShuffledQuestions();
+                groupRoom.CurrentQuestionIndex = -1;
+                groupRoom.Answers.Clear();
+                foreach (var seat in groupRoom.Seats)
+                {
+                    if (seat != null) seat.Score = 0;
+                }
+            }
+        }
+
+        if (error != null)
+        {
+            await Clients.Caller.SendAsync("GroupRoomActionFailed", error);
+            return;
+        }
+
+        await BroadcastRoom(groupRoom);
+        await SendNextGroupQuestion(groupRoom);
+    }
+
+    public async Task SubmitGroupAnswer(int choiceIndex)
+    {
+        var groupRoom = _rooms.FindGroupRoom(Context.ConnectionId);
+        if (groupRoom == null) return;
+        GroupQuizSeat? playerSeat;
+        GroupQuizAnswer answer;
+        bool shouldResolve;
+
+        lock (groupRoom.Lock)
+        {
+            playerSeat = groupRoom.Seats.FirstOrDefault(seat => seat?.Player.ConnectionId == Context.ConnectionId);
+            if (playerSeat == null ||
+                !groupRoom.Started ||
+                groupRoom.QuestionTimeoutCts == null ||
+                groupRoom.CurrentQuestionIndex < 0 ||
+                groupRoom.CurrentQuestionIndex >= groupRoom.Questions.Count ||
+                choiceIndex < 0 ||
+                choiceIndex >= groupRoom.Questions[groupRoom.CurrentQuestionIndex].Choices.Count ||
+                groupRoom.Answers.ContainsKey(Context.ConnectionId))
+            {
+                return;
+            }
+
+            var elapsed = Math.Clamp(
+                (long)(DateTime.UtcNow - groupRoom.QuestionStartedAt).TotalMilliseconds,
+                0,
+                GroupQuizRoom.QuestionTimeLimitSeconds * 1000L);
+            if (elapsed >= GroupQuizRoom.QuestionTimeLimitSeconds * 1000L)
+            {
+                return;
+            }
+
+            var question = groupRoom.Questions[groupRoom.CurrentQuestionIndex];
+            var isCorrect = choiceIndex == question.CorrectIndex;
+            var remainingFraction = 1.0 - (double)elapsed / (GroupQuizRoom.QuestionTimeLimitSeconds * 1000);
+            var points = isCorrect ? (int)Math.Floor(1000 * remainingFraction) : 0;
+            answer = new GroupQuizAnswer
+            {
+                ChoiceIndex = choiceIndex,
+                ElapsedMs = elapsed,
+                IsCorrect = isCorrect,
+                Points = points
+            };
+            groupRoom.Answers.Add(Context.ConnectionId, answer);
+            playerSeat.Score += points;
+            shouldResolve = groupRoom.Seats
+                .Where(seat => seat != null)
+                .All(seat => groupRoom.Answers.ContainsKey(seat!.Player.ConnectionId));
+        }
+
+        await _hubContext.Clients.Group(GroupName(groupRoom)).SendAsync(
+            "GroupPlayerAnswered",
+            playerSeat.SeatNumber,
+            playerSeat.Player.Name,
+            Context.ConnectionId,
+            answer.IsCorrect,
+            answer.Points,
+            playerSeat.Score);
+
+        if (shouldResolve)
+        {
+            await ResolveGroupRound(groupRoom);
+        }
+    }
+
+    private static string GroupName(GroupQuizRoom room) => $"Room:{room.Code}";
+
+    private async Task LeaveRoomCore(string connectionId)
+    {
+        var room = _rooms.FindGroupRoom(connectionId);
+        if (room == null) return;
+
+        CancellationTokenSource? timeoutCts = null;
+        bool destroy = false;
+        bool shouldResolve = false;
+
+        lock (room.Lock)
+        {
+            room.Members.Remove(connectionId);
+            var idx = Array.FindIndex(room.Seats, seat => seat?.Player.ConnectionId == connectionId);
+            if (idx >= 0) room.Seats[idx] = null;
+
+            if (room.Members.Count == 0)
+            {
+                destroy = true;
+                timeoutCts = room.QuestionTimeoutCts;
+                room.QuestionTimeoutCts = null;
+                room.Started = false;
+            }
+            else
+            {
+                if (room.HostConnectionId == connectionId)
+                {
+                    room.HostConnectionId = room.Seats
+                        .Where(seat => seat != null)
+                        .OrderBy(seat => seat!.SeatedAt)
+                        .FirstOrDefault()?.Player.ConnectionId
+                        ?? room.Members.First();
+                }
+
+                if (room.Started && room.Seats.All(seat => seat == null))
+                {
+                    // Everyone who was playing has left: end the game.
+                    timeoutCts = room.QuestionTimeoutCts;
+                    room.QuestionTimeoutCts = null;
+                    room.Started = false;
+                }
+                else if (room.Started && room.QuestionTimeoutCts != null)
+                {
+                    shouldResolve = room.Seats
+                        .Where(seat => seat != null)
+                        .All(seat => room.Answers.ContainsKey(seat!.Player.ConnectionId));
+                }
+            }
+        }
+
+        timeoutCts?.Cancel();
+        timeoutCts?.Dispose();
+        await _hubContext.Groups.RemoveFromGroupAsync(connectionId, GroupName(room));
+
+        if (destroy)
+        {
+            _rooms.GroupRooms.TryRemove(room.Code, out _);
+            return;
+        }
+
+        await BroadcastRoom(room);
+        if (shouldResolve)
+        {
+            await ResolveGroupRound(room);
+        }
+    }
+
+    private async Task SendNextGroupQuestion(GroupQuizRoom groupRoom)
+    {
+        QuizQuestion? question = null;
+        int questionIndex = -1;
+        CancellationToken token = default;
+        CancellationTokenSource? previousTimeout = null;
+        bool gameOver = false;
+
+        lock (groupRoom.Lock)
+        {
+            if (!groupRoom.Started || groupRoom.Seats.All(seat => seat == null)) return;
+
+            previousTimeout = groupRoom.QuestionTimeoutCts;
+            groupRoom.QuestionTimeoutCts = null;
+            groupRoom.CurrentQuestionIndex++;
+            if (groupRoom.CurrentQuestionIndex >= groupRoom.Questions.Count)
+            {
+                groupRoom.Started = false;
+                groupRoom.Finished = true;
+                gameOver = true;
+            }
+            else
+            {
+                questionIndex = groupRoom.CurrentQuestionIndex;
+                question = groupRoom.Questions[questionIndex];
+                groupRoom.Answers.Clear();
+                groupRoom.QuestionStartedAt = DateTime.UtcNow;
+                groupRoom.QuestionTimeoutCts = new CancellationTokenSource();
+                token = groupRoom.QuestionTimeoutCts.Token;
+            }
+        }
+
+        previousTimeout?.Dispose();
+        if (gameOver)
+        {
+            await _hubContext.Clients.Group(GroupName(groupRoom)).SendAsync(
+                "GroupGameOver",
+                GetGroupScoreboard(groupRoom));
+            await BroadcastRoom(groupRoom);
+            return;
+        }
+
+        await _hubContext.Clients.Group(GroupName(groupRoom)).SendAsync(
+            "GroupNewQuestion",
+            questionIndex,
+            question!.Text,
+            question.Choices,
+            GroupQuizRoom.QuestionTimeLimitSeconds);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(GroupQuizRoom.QuestionTimeLimitSeconds * 1000, token);
+                await ResolveGroupRound(groupRoom);
+            }
+            catch (OperationCanceledException)
+            {
+                // The round resolved before the timeout.
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in group quiz timeout timer: {ex}");
+            }
+        });
+    }
+
+    private async Task ResolveGroupRound(GroupQuizRoom groupRoom)
+    {
+        int questionIndex;
+        int correctIndex;
+        CancellationTokenSource? timeoutCts;
+
+        lock (groupRoom.Lock)
+        {
+            if (groupRoom.QuestionTimeoutCts == null ||
+                groupRoom.CurrentQuestionIndex < 0 ||
+                groupRoom.CurrentQuestionIndex >= groupRoom.Questions.Count)
+            {
+                return;
+            }
+
+            timeoutCts = groupRoom.QuestionTimeoutCts;
+            groupRoom.QuestionTimeoutCts = null;
+            questionIndex = groupRoom.CurrentQuestionIndex;
+            correctIndex = groupRoom.Questions[questionIndex].CorrectIndex;
+        }
+
+        timeoutCts.Cancel();
+        timeoutCts.Dispose();
+        await _hubContext.Clients.Group(GroupName(groupRoom)).SendAsync(
+            "GroupRoundResolved",
+            questionIndex,
+            correctIndex,
+            GetGroupScoreboard(groupRoom));
+
+        await Task.Delay(1200);
+        await SendNextGroupQuestion(groupRoom);
+    }
+
+    private object GetRoomSnapshot(GroupQuizRoom room)
+    {
+        lock (room.Lock)
+        {
+            return new
+            {
+                code = room.Code,
+                seats = room.Seats.Select(seat => seat == null ? null : new
+                {
+                    seatNumber = seat.SeatNumber,
+                    name = seat.Player.Name,
+                    connectionId = seat.Player.ConnectionId,
+                    score = seat.Score,
+                    color = seat.Player.Character.Color
+                }).ToArray(),
+                members = room.Members
+                    .Select(id => _rooms.LobbyPlayers.TryGetValue(id, out var p)
+                        ? new { connectionId = id, name = p.Name }
+                        : null)
+                    .Where(m => m != null)
+                    .ToArray(),
+                hostConnectionId = room.HostConnectionId,
+                started = room.Started,
+                finished = room.Finished
+            };
+        }
+    }
+
+    private object GetGroupScoreboard(GroupQuizRoom groupRoom)
+    {
+        lock (groupRoom.Lock)
+        {
+            return groupRoom.Seats
+                .Where(seat => seat != null)
+                .Select(seat => new
+                {
+                    seatNumber = seat!.SeatNumber,
+                    name = seat.Player.Name,
+                    score = seat.Score
+                })
+                .OrderByDescending(player => player.score)
+                .ThenBy(player => player.seatNumber)
+                .ToArray();
+        }
+    }
+
+    private Task BroadcastRoom(GroupQuizRoom room) =>
+        _hubContext.Clients.Group(GroupName(room)).SendAsync("RoomUpdated", GetRoomSnapshot(room));
+
     // ---------- Matchmaking ----------
 
     public async Task RequestMatch()
     {
+        await LeaveRoomCore(Context.ConnectionId);
         var match = _rooms.EnqueueForMatch(Context.ConnectionId);
         if (match == null)
         {
@@ -81,71 +584,6 @@ public class GameHub : Hub
         await _hubContext.Clients.Client(id2).SendAsync("MatchFound", room.Id, p1.Name, p1.Character, p2.HP, p1.HP);
 
         // The quiz doesn't start yet — both players need to click "I'm Ready" first (see PlayerReady).
-    }
-
-    // ---------- Private rooms ----------
-
-    public async Task CreatePrivateRoom()
-    {
-        if (!_rooms.LobbyPlayers.ContainsKey(Context.ConnectionId)) return;
-        var code = _rooms.CreatePrivateRoomCode(Context.ConnectionId);
-        await Clients.Caller.SendAsync("PrivateRoomCreated", code);
-    }
-
-    public Task CancelPrivateRoom(string code)
-    {
-        if (!string.IsNullOrWhiteSpace(code))
-        {
-            _rooms.CancelPrivateRoomCode(code.Trim().ToUpperInvariant());
-        }
-        return Task.CompletedTask;
-    }
-
-    public async Task JoinPrivateRoom(string code)
-    {
-        var normalized = (code ?? "").Trim().ToUpperInvariant();
-        if (string.IsNullOrEmpty(normalized))
-        {
-            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "empty");
-            return;
-        }
-
-        if (!_rooms.TryConsumePrivateRoomCode(normalized, out var creatorId) || creatorId == null)
-        {
-            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "not-found");
-            return;
-        }
-
-        if (creatorId == Context.ConnectionId)
-        {
-            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "self");
-            return;
-        }
-
-        if (!_rooms.LobbyPlayers.TryGetValue(creatorId, out var p1) ||
-            !_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var p2))
-        {
-            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "opponent-left");
-            return;
-        }
-
-        if (_quiz.Count == 0)
-        {
-            await Clients.Caller.SendAsync("PrivateRoomJoinFailed", "no-questions");
-            return;
-        }
-
-        var room = _rooms.CreateRoom(p1, p2, _quiz.GetShuffledQuestions());
-
-        await _hubContext.Groups.AddToGroupAsync(p1.ConnectionId, room.Id);
-        await _hubContext.Groups.AddToGroupAsync(p2.ConnectionId, room.Id);
-        await _hubContext.Groups.RemoveFromGroupAsync(p1.ConnectionId, "Lobby");
-        await _hubContext.Groups.RemoveFromGroupAsync(p2.ConnectionId, "Lobby");
-
-        await _hubContext.Clients.Client(p1.ConnectionId).SendAsync("MatchFound", room.Id, p2.Name, p2.Character, p1.HP, p2.HP);
-        await _hubContext.Clients.Client(p2.ConnectionId).SendAsync("MatchFound", room.Id, p1.Name, p1.Character, p2.HP, p1.HP);
-
-        // Same "both click ready" flow as random matchmaking (see PlayerReady) — no special-casing needed here.
     }
 
     public async Task PlayerReady(string roomId)
@@ -431,6 +869,7 @@ public class GameHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var id = Context.ConnectionId;
+        await LeaveRoomCore(id);
         _rooms.RemovePlayer(id);
 
         var room = _rooms.Rooms.Values.FirstOrDefault(r => r.Player1.ConnectionId == id || r.Player2.ConnectionId == id);

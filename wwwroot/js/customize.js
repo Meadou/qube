@@ -13,8 +13,8 @@ function initCustomizeScreen() {
     };
 }
 
-document.getElementById('confirm-character-btn').addEventListener('click', async () => {
+document.getElementById('confirm-character-btn').onclick = async () => {
     await window.hubConnectionStarted;
     await window.hubConnection.invoke('JoinLobby', window.gameState.playerName, window.gameState.characterConfig);
     showScreen('lobby');
-});
+};

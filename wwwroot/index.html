@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuBe: Speed Quiz Arena</title>
+    <title>Totally not VibeCoded.io</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -37,19 +37,28 @@
             <rect x="2" y="14" width="2" height="2"/>
             <rect x="4" y="14" width="2" height="2"/>
         </svg>
-        <span class="game-brand-text">QuBe</span>
+        <span class="game-brand-text">Totally not VibeCoded.io</span>
     </header>
 
+    <!-- Top bar: players online -->
+    <div id="hud" class="hud">
+        <div class="hud-online">
+            <span class="live-dot"></span><span>ONLINE</span><strong id="online-count">0</strong>
+            <span id="current-player-name"></span>
+        </div>
+    </div>
+
+    <div class="stage">
     <main id="app">
 
     <!-- ===================== LOGIN ===================== -->
     <section id="screen-login" class="screen active">
         <div class="panel">
             <h1>QuBe</h1>
-            <p class="subtitle">Real-time 1v1 quiz duels.</p>
+            <p class="subtitle">Think fast. Take your place.</p>
             <form id="login-form">
                 <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="16" required>
-                <button type="submit" class="btn btn-primary">Continue</button>
+                <button type="submit" class="btn btn-primary">Enter menu</button>
             </form>
         </div>
     </section>
@@ -64,50 +73,89 @@
                 <label>Body color <input type="color" id="color-body" value="#ffffff"></label>
             </div>
 
-            <button id="confirm-character-btn" class="btn btn-primary">Enter lobby</button>
+            <button id="confirm-character-btn" class="btn btn-primary">Save &amp; back to menu</button>
         </div>
     </section>
 
-    <!-- ===================== LOBBY ===================== -->
-    <section id="screen-lobby" class="screen">
-        <div class="panel panel-wide">
-            <h2>Lobby</h2>
+    <!-- ===================== MENU ===================== -->
+    <section id="screen-lobby" class="screen screen-shell">
+        <h1 class="screen-title">HOME</h1>
+        <div class="slabs">
+            <button class="menu-slab slab-pink" type="button" data-go="multiplayer">
+                <span class="slab-glyph">MP</span>
+                <span class="slab-text"><strong>MULTIPLAYER</strong><small>Create or join a room with a code</small></span>
+            </button>
+            <button id="find-match-btn" class="menu-slab slab-purple" type="button">
+                <span class="slab-glyph">1v1</span>
+                <span class="slab-text"><strong>QUICK DUEL</strong><small>Find an opponent and fight</small></span>
+            </button>
+            <button class="menu-slab slab-blue" type="button" aria-disabled="true" title="Coming soon">
+                <span class="slab-glyph">CFG</span>
+                <span class="slab-text"><strong>COMING SOON</strong><small>Tweak your cube</small></span>
+            </button>
+        </div>
+        <p id="match-status" class="status-text"></p>
+    </section>
 
-            <div class="lobby-grid">
-                <div class="lobby-players">
-                    <h3>Players online</h3>
-                    <ul id="lobby-player-list"></ul>
-                    <button id="find-match-btn" class="btn btn-primary">Find match</button>
-                    <p id="match-status" class="status-text"></p>
-
-                    <div class="private-room-divider"><span>or play privately</span></div>
-
-                    <div id="private-room-controls" class="private-room-controls">
-                        <button id="create-private-btn" class="btn">Create private room</button>
-                        <form id="join-private-form" class="private-room-join-form">
-                            <input type="text" id="private-room-code-input" placeholder="Enter code" maxlength="6" autocomplete="off">
-                            <button type="submit" class="btn">Join</button>
-                        </form>
+    <!-- ===================== MULTIPLAYER (create / join) ===================== -->
+    <section id="screen-multiplayer" class="screen screen-shell">
+        <h1 class="screen-title">MULTIPLAYER</h1>
+        <div class="slabs">
+            <button id="create-room-btn" class="menu-slab slab-green" type="button">
+                <span class="slab-glyph">+</span>
+                <span class="slab-text"><strong>CREATE ROOM</strong><small>You get a code to share</small></span>
+            </button>
+            <div class="menu-slab slab-pink slab-static">
+                <span class="slab-glyph">#</span>
+                <form id="join-room-form" class="slab-text">
+                    <strong>JOIN ROOM</strong>
+                    <div class="join-row">
+                        <input type="text" id="room-code-input" maxlength="5" placeholder="CODE" autocomplete="off" aria-label="Room code">
+                        <button class="btn btn-primary" type="submit">Join</button>
                     </div>
-
-                    <div id="private-room-waiting" class="private-room-waiting hidden">
-                        <p class="private-room-label">Share this code with a friend:</p>
-                        <div id="private-room-code-display" class="private-room-code-display" title="Click to copy"></div>
-                        <p class="status-text">Waiting for them to join...</p>
-                        <button id="cancel-private-btn" class="btn">Cancel</button>
-                    </div>
-                </div>
-
-                <div class="lobby-chat">
-                    <h3>Global chat</h3>
-                    <div id="chat-messages" class="chat-messages"></div>
-                    <form id="chat-form" class="chat-form">
-                        <input type="text" id="chat-input" placeholder="Say something..." maxlength="200" autocomplete="off">
-                        <button type="submit" class="btn">Send</button>
-                    </form>
-                </div>
+                </form>
             </div>
         </div>
+        <p id="lobby-error" class="status-text" role="status"></p>
+        <button class="btn back-btn" type="button" data-go="lobby">&larr; Back</button>
+    </section>
+
+    <!-- ===================== ROOM (waiting room + group quiz) ===================== -->
+    <section id="screen-room" class="screen screen-shell">
+        <div id="room-waiting" class="room">
+            <div class="room-head">
+                <div>
+                    <span class="eyebrow">WAITING ROOM &middot; CLICK THE CODE TO COPY</span>
+                    <button id="room-code-display" class="room-code" type="button"></button>
+                </div>
+                <div class="room-actions">
+                    <span id="group-host-status" class="group-host-status"></span>
+                    <button id="group-leave-seat-btn" class="btn hidden" type="button">Stand up</button>
+                    <button id="group-start-btn" class="btn btn-primary" type="button" disabled>Start game</button>
+                    <button id="room-leave-btn" class="btn" type="button">Leave room</button>
+                </div>
+            </div>
+            <p id="group-room-status" class="status-text"></p>
+            <p id="group-room-error" class="status-text" role="status"></p>
+            <ul id="room-members" class="room-members"></ul>
+            <div id="group-seat-grid" class="group-seat-grid" aria-label="Chairs"></div>
+        </div>
+
+        <!-- Game view: only the question and the choices -->
+        <div id="room-game" class="room-game hidden">
+            <section id="group-question-panel" class="group-question-panel hidden" aria-live="polite">
+                <div class="group-question-header"><span id="group-round-number">Question 1</span><span><span id="group-timer">5</span>s</span></div>
+                <h3 id="group-question-text"></h3>
+                <div id="group-choices" class="group-choices"></div>
+                <p id="group-round-status" class="status-text"></p>
+            </section>
+            <section id="group-gameover" class="group-gameover hidden" aria-live="polite">
+                <h3>Quiz complete</h3>
+                <ol id="group-final-scoreboard" class="group-scoreboard"></ol>
+                <button id="group-back-btn" class="btn btn-primary" type="button">Back to room</button>
+            </section>
+        </div>
+        <div id="room-toasts" class="room-toasts"></div>
     </section>
 
     <!-- ===================== MATCH ===================== -->
@@ -172,6 +220,17 @@
 
     </main>
 
+    <!-- Global chat: right side -->
+    <aside id="global-chat" class="global-chat">
+        <div class="chat-heading"><span class="eyebrow">LIVE CHANNEL</span><h3>Global chat</h3></div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <form id="chat-form" class="chat-form">
+            <input type="text" id="chat-input" placeholder="Message the lobby..." maxlength="200" autocomplete="off">
+            <button type="submit" class="btn" aria-label="Send message">Send</button>
+        </form>
+    </aside>
+    </div>
+
     <!-- SignalR client library (loaded locally, same-origin) -->
     <script src="signalr.min.js"></script>
     <script src="js/character.js"></script>
@@ -180,6 +239,7 @@
     <script src="js/main.js"></script>
     <script src="js/customize.js"></script>
     <script src="js/lobby.js"></script>
+    <script src="js/room.js"></script>
     <script src="js/game.js"></script>
 </body>
 </html>

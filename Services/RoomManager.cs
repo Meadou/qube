@@ -4,15 +4,15 @@ using CSharpQuizGame.Models;
 namespace CSharpQuizGame.Services;
 
 // Singleton tracking who's in the lobby, who's waiting to be matched, and
-// which rooms (1v1 matches) are currently active.
+// which rooms (1v1 matches and code-based group rooms) are currently active.
 public class RoomManager
 {
     public ConcurrentDictionary<string, PlayerInfo> LobbyPlayers { get; } = new();
     public ConcurrentDictionary<string, GameRoom> Rooms { get; } = new();
 
-    // code -> creator's connectionId. A code exists only while its creator is
-    // sitting in the lobby waiting for someone to join with it.
-    public ConcurrentDictionary<string, string> PendingPrivateRooms { get; } = new();
+    // code -> multiplayer waiting room / quiz room. A room exists while at
+    // least one member is inside it.
+    public ConcurrentDictionary<string, GroupQuizRoom> GroupRooms { get; } = new();
 
     // Ambiguous characters (0/O, 1/I) are excluded so codes are easy to read
     // aloud or type on a phone.
@@ -30,41 +30,32 @@ public class RoomManager
     {
         LobbyPlayers.TryRemove(connectionId, out _);
         CancelQueue(connectionId);
-        RemovePendingPrivateRoomsFor(connectionId);
     }
 
-    public string CreatePrivateRoomCode(string connectionId)
+    public GroupQuizRoom CreateGroupRoom()
     {
-        string code;
-        do
+        while (true)
         {
             var chars = new char[5];
             for (int i = 0; i < chars.Length; i++)
             {
                 chars[i] = CodeChars[Random.Shared.Next(CodeChars.Length)];
             }
-            code = new string(chars);
-        } while (!PendingPrivateRooms.TryAdd(code, connectionId));
-
-        return code;
-    }
-
-    public bool TryConsumePrivateRoomCode(string code, out string? creatorConnectionId)
-    {
-        return PendingPrivateRooms.TryRemove(code, out creatorConnectionId);
-    }
-
-    public void CancelPrivateRoomCode(string code)
-    {
-        PendingPrivateRooms.TryRemove(code, out _);
-    }
-
-    private void RemovePendingPrivateRoomsFor(string connectionId)
-    {
-        foreach (var kvp in PendingPrivateRooms)
-        {
-            if (kvp.Value == connectionId) PendingPrivateRooms.TryRemove(kvp.Key, out _);
+            var room = new GroupQuizRoom { Code = new string(chars) };
+            if (GroupRooms.TryAdd(room.Code, room)) return room;
         }
+    }
+
+    public GroupQuizRoom? FindGroupRoom(string connectionId)
+    {
+        foreach (var room in GroupRooms.Values)
+        {
+            lock (room.Lock)
+            {
+                if (room.Members.Contains(connectionId)) return room;
+            }
+        }
+        return null;
     }
 
     // Adds connectionId to the matchmaking queue. If this makes 2+ people
