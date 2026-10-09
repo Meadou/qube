@@ -2,6 +2,11 @@ const GameSound = (() => {
     let ctx = null;
     let muted = localStorage.getItem('brawl-muted') === 'true';
 
+    let menuMusic = null;
+    let selectSfx = null;
+    let selectedSfx = null;
+    let joinSfx = null;
+
     function getCtx() {
         if (!ctx) {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -31,11 +36,109 @@ const GameSound = (() => {
         }
     }
 
+    function loadAudio(path, loop = false) {
+        try {
+            const audio = new Audio(path);
+            audio.loop = loop;
+            audio.preload = 'auto';
+            return audio;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function ensureMenuMusic() {
+        if (!menuMusic) menuMusic = loadAudio('audio/QUBE-MENU-Song.wav', true);
+    }
+
+    function ensureSfx() {
+        if (!selectSfx) selectSfx = loadAudio('audio/select.wav', false);
+        if (!selectedSfx) selectedSfx = loadAudio('audio/selected.wav', false);
+        if (!joinSfx) joinSfx = loadAudio('audio/join.wav', false);
+    }
+
+    function playAudio(audio, restart = false) {
+        if (muted || !audio) return;
+        try {
+            getCtx();
+            if (restart || audio.paused) {
+                audio.currentTime = 0;
+                const p = audio.play();
+                if (p && p.catch) p.catch(() => {});
+            } else {
+                audio.currentTime = 0;
+                const p = audio.play();
+                if (p && p.catch) p.catch(() => {});
+            }
+        } catch (e) {
+        }
+    }
+
     return {
         isMuted: () => muted,
         setMuted(value) {
             muted = value;
             localStorage.setItem('brawl-muted', String(muted));
+            try {
+                ensureMenuMusic();
+                if (menuMusic) menuMusic.muted = muted;
+                if (muted) {
+                    menuMusic.pause();
+                } else {
+                    const p = menuMusic.play();
+                    if (p && p.catch) p.catch(() => {});
+                }
+            } catch (e) {
+            }
+        },
+        menuMusicStart() {
+            ensureMenuMusic();
+            if (!menuMusic) return;
+            try {
+                getCtx();
+                menuMusic.muted = muted;
+                menuMusic.loop = true;
+                const p = menuMusic.play();
+                if (p && p.catch) p.catch(() => {});
+            } catch (e) {
+            }
+        },
+        menuMusicStop() {
+            ensureMenuMusic();
+            if (menuMusic) {
+                try { menuMusic.pause(); } catch (e) {}
+                menuMusic.currentTime = 0;
+            }
+        },
+        hover() {
+            ensureSfx();
+            if (muted || !selectSfx) return;
+            try {
+                selectSfx.currentTime = 0;
+                const p = selectSfx.play();
+                if (p && p.catch) p.catch(() => {});
+            } catch (e) {
+            }
+        },
+        select() {
+            ensureSfx();
+            if (muted || !selectedSfx) return;
+            try {
+                selectedSfx.currentTime = 0;
+                const p = selectedSfx.play();
+                if (p && p.catch) p.catch(() => {});
+            } catch (e) {
+            }
+        },
+        join() {
+            ensureSfx();
+            if (muted || !joinSfx) return;
+            try {
+                joinSfx.currentTime = 0;
+                const p = joinSfx.play();
+                if (p && p.catch) p.catch(() => {});
+            } catch (e) {
+            }
         },
         answerLock() { tone(500, 0.08, 'square', 0.05); },
         correct() {
@@ -53,4 +156,5 @@ const GameSound = (() => {
             [400, 320, 240].forEach((f, i) => tone(f, 0.22, 'sawtooth', 0.08, i * 0.13));
         },
     };
+    window.GameSound = GameSound;
 })();

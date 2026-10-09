@@ -44,6 +44,20 @@ document.getElementById('login-form').addEventListener('submit', (e) => {
             await window.hubConnectionStarted;
             await window.hubConnection.invoke('JoinLobby', name, window.gameState.characterConfig);
             showScreen('lobby');
+            if (window.GameSound && typeof GameSound.menuMusicStart === 'function') {
+                try { GameSound.menuMusicStart(); } catch (e) {}
+            }
+            const tryStartMusic = () => {
+                if (window.GameSound && typeof GameSound.menuMusicStart === 'function') {
+                    try { GameSound.menuMusicStart(); } catch (e) {}
+                }
+                document.removeEventListener('click', tryStartMusic);
+                document.removeEventListener('keydown', tryStartMusic);
+                document.removeEventListener('touchstart', tryStartMusic);
+            };
+            document.addEventListener('click', tryStartMusic, { once: true, passive: true });
+            document.addEventListener('keydown', tryStartMusic, { once: true });
+            document.addEventListener('touchstart', tryStartMusic, { once: true, passive: true });
         } catch (error) {
             console.error('JoinLobby failed:', error);
             showScreen('customize');

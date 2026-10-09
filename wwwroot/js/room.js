@@ -95,7 +95,12 @@
         setTimeout(() => el.remove(), 3000);
     }
     hub.on('RoomMemberJoined', (name, connectionId) => {
-        if (connectionId !== myId()) toast(`${name} joined the room`);
+        if (connectionId !== myId()) {
+            toast(`${name} joined the room`);
+            if (window.GameSound && typeof GameSound.join === 'function') {
+                try { GameSound.join(); } catch (e) {}
+            }
+        }
     });
 
     function renderRoom(snap) {
