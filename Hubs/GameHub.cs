@@ -9,6 +9,7 @@ public class GameHub : Hub
     private const int RoundTimeoutSeconds = 15;
     private const int DamagePerHit = 20;
     private const int DelayBetweenRoundsMs = 2500;
+    private const int CountdownMs = 3800;   // 3 + 2 + 1 + GO
 
     private readonly RoomManager _rooms;
     private readonly QuizService _quiz;
@@ -264,6 +265,11 @@ public class GameHub : Hub
         }
 
         await BroadcastRoom(groupRoom);
+
+        // Separate start-of-game countdown. The question timer only starts after it.
+        await _hubContext.Clients.Group(GroupName(groupRoom)).SendAsync("GroupCountdown", 3);
+        await Task.Delay(CountdownMs);
+
         await SendNextGroupQuestion(groupRoom);
     }
 
@@ -605,6 +611,9 @@ public class GameHub : Hub
 
         if (bothReady)
         {
+            // Separate start-of-match countdown. The round timer only starts after it.
+            await _hubContext.Clients.Group(roomId).SendAsync("MatchCountdown", 3);
+            await Task.Delay(CountdownMs);
             await SendNextQuestion(room);
         }
     }

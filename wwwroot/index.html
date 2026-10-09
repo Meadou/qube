@@ -123,18 +123,19 @@
             <section id="group-gameover" class="group-gameover hidden" aria-live="polite">
                 <h3>Quiz complete</h3>
                 <ol id="group-final-scoreboard" class="group-scoreboard group-scoreboard-xl"></ol>
-                <button id="group-back-btn" class="btn btn-primary" type="button">Back to room</button>
+                <div class="group-gameover-actions">
+                    <button id="group-back-btn" class="btn btn-primary" type="button">Back to room</button>
+                </div>
             </section>
         </div>
-        <div id="countdown-big-room" class="countdown-big hidden"></div>
         <div id="room-toasts" class="room-toasts"></div>
     </section>
+
 
     <!-- ===================== MATCH ===================== -->
     <section id="screen-match" class="screen">
         <div class="panel panel-wide" style="position: relative;">
             <div id="hit-flash-overlay" class="hit-flash-overlay"></div>
-            <div id="countdown-big" class="countdown-big hidden"></div>
             <div class="match-header">
                 <div id="round-counter" class="round-counter">ROUND 1</div>
                 <div id="timer-display" class="timer-top">15</div>
@@ -190,7 +191,6 @@
             </div>
         </div>
     </section>
-
     </main>
 
     <!-- Global chat: right side -->
@@ -203,6 +203,8 @@
         </form>
     </aside>
     </div>
+    <div id="countdown-big" class="countdown-big hidden"></div>
+    <div id="countdown-big-room" class="countdown-big hidden" style="font-size: 35vw;"></div>
 
     <!-- SignalR client library (loaded locally, same-origin) -->
     <script src="signalr.min.js"></script>

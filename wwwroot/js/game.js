@@ -3,6 +3,7 @@ let opponentCharacter = null;
 let currentRoomId = null;
 let hasAnsweredThisRound = false;
 let roundTimerInterval = null;
+let countdownTimeout = null;
 let currentRoundTimeSeconds = 15;
 let lastOpponentName = '';
 let lastOpponentConfig = null;
@@ -15,6 +16,7 @@ function startMatch(roomId, opponentName, opponentConfig, myHP, opponentHP) {
     lastOpponentName = opponentName;
     lastOpponentConfig = opponentConfig;
     stopRoundTimer();
+    stopCountdown();
     document.getElementById('match-status').textContent = '';
     showScreen('match');
 
@@ -59,7 +61,6 @@ function startRoundTimer() {
 
     roundTimerInterval = setInterval(() => {
         timeLeft--;
-        if (timeLeft <= 5 && timeLeft > 0) GameSound.tick();
         if (timeLeft <= 0) {
             timeLeft = 0;
             stopRoundTimer();
@@ -85,6 +86,57 @@ function updateTimerDisplay(seconds) {
         timerEl.classList.remove('warning');
     }
 }
+
+// ---------- countdown (start of the match only) ----------
+function stopCountdown() {
+    if (countdownTimeout) { clearTimeout(countdownTimeout); countdownTimeout = null; }
+    const el = document.getElementById('countdown-big');
+    if (el) {
+        el.classList.remove('active');
+        el.style.display = 'none';
+        el.replaceChildren();
+    }
+}
+
+// Standalone 3-2-1-GO overlay. Own timer, tick sounds, no link to the round timer.
+function runCountdown(from) {
+    const el = document.getElementById('countdown-big');
+    if (!el) return;
+    stopCountdown();
+    // Guarantee the overlay is a direct child of <body> so nothing can clip
+    // or re-parent it, then reveal it on top of everything else.
+    if (el.parentElement !== document.body) document.body.appendChild(el);
+    // Drive visibility purely with inline styles so no stylesheet rule can
+    // override it. Drop the !important-bearing classes or they would win.
+    el.classList.remove('hidden', 'active');
+    el.style.cssText =
+        'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;' +
+        'background:rgba(0,0,0,.92);z-index:2147483647;pointer-events:none;';
+    const steps = [];
+    for (let n = from; n >= 1; n--) steps.push(String(n));
+    steps.push('GO');
+    let i = 0;
+    const step = () => {
+        const span = document.createElement('span');
+        span.className = 'countdown-num' + (steps[i] === 'GO' ? ' countdown-go' : '');
+        span.textContent = steps[i];
+        el.replaceChildren(span);
+        // Tick sound for every step (3, 2, 1, GO) using selected.wav.
+        if (typeof GameSound !== 'undefined' && GameSound.select) {
+            try { GameSound.select(); } catch (e) {}
+        }
+        i++;
+        countdownTimeout = setTimeout(i < steps.length ? step : stopCountdown, i < steps.length ? 1000 : 800);
+    };
+    step();
+}
+
+// Server sends this BEFORE round 1.
+window.hubConnection.on('MatchCountdown', (seconds) => {
+    document.getElementById('ready-panel').classList.add('hidden');
+    GameSound.menuMusicStop();
+    runCountdown(seconds || 3);
+});
 
 window.hubConnection.on('MatchFound', (roomId, opponentName, opponentConfig, myHP, opponentHP) => {
     startMatch(roomId, opponentName, opponentConfig, myHP, opponentHP);
@@ -124,61 +176,35 @@ window.hubConnection.on('ReadyUpdate', (connectionId) => {
     }
 });
 
+function renderQuestion(index, text, choices) {
+    const questionEl = document.getElementById('question-text');
+    questionEl.classList.remove('hidden');
+    questionEl.textContent = text;
+    document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
+
+    const container = document.getElementById('choices-container');
+    container.innerHTML = '';
+    choices.forEach((choiceText, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn choice-btn';
+        btn.textContent = choiceText;
+        btn.addEventListener('click', () => submitAnswer(i, btn));
+        container.appendChild(btn);
+    });
+    startRoundTimer();
+}
+
 window.hubConnection.on('NewQuestion', (index, text, choices, roundTimeSeconds) => {
-    GameSound.menuMusicStop();
     hasAnsweredThisRound = false;
     if (roundTimeSeconds) currentRoundTimeSeconds = roundTimeSeconds;
+    document.getElementById('ready-panel').classList.add('hidden');
+    document.getElementById('question-text').classList.add('hidden');
+    document.getElementById('choices-container').innerHTML = '';
 
-    const countdownEl = document.getElementById('countdown-big');
-    if (countdownEl) {
-        countdownEl.classList.remove('hidden');
-        let n = 3;
-        const seq = () => {
-            if (n > 0) {
-                countdownEl.textContent = n;
-                GameSound.select();
-                n--;
-                setTimeout(seq, 1000);
-            } else {
-                countdownEl.textContent = 'GO';
-                GameSound.select();
-                setTimeout(() => {
-                    countdownEl.classList.add('hidden');
-                    countdownEl.textContent = '';
-                    document.getElementById('ready-panel').classList.add('hidden');
-                    document.getElementById('question-text').classList.remove('hidden');
-                    document.getElementById('question-text').textContent = text;
-                    document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
-                    const container = document.getElementById('choices-container');
-                    container.innerHTML = '';
-                    choices.forEach((choiceText, i) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn choice-btn';
-                        btn.textContent = choiceText;
-                        btn.addEventListener('click', () => submitAnswer(i, btn));
-                        container.appendChild(btn);
-                    });
-                    startRoundTimer();
-                }, 800);
-            }
-        };
-        seq();
-    } else {
-        document.getElementById('ready-panel').classList.add('hidden');
-        document.getElementById('question-text').classList.remove('hidden');
-        document.getElementById('question-text').textContent = text;
-        document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
-        const container = document.getElementById('choices-container');
-        container.innerHTML = '';
-        choices.forEach((choiceText, i) => {
-            const btn = document.createElement('button');
-            btn.className = 'btn choice-btn';
-            btn.textContent = choiceText;
-            btn.addEventListener('click', () => submitAnswer(i, btn));
-            container.appendChild(btn);
-        });
-        startRoundTimer();
-    }
+    // The question always appears immediately and gets its full time.
+    stopCountdown();
+    if (index === 0) GameSound.menuMusicStop();
+    renderQuestion(index, text, choices);
 });
 
 window.hubConnection.on('PlayerAnswered', (connectionId) => {
@@ -251,6 +277,7 @@ window.hubConnection.on('RoundResult', (correctIndex, outcome, myHP, opponentHP,
 });
 
 window.hubConnection.on('MatchOver', (winnerName) => {
+    stopCountdown();
     GameSound.ensureMenuMusicStarted();
     stopRoundTimer();
     setTimeout(() => showMatchOver(winnerName), 500);
@@ -330,6 +357,7 @@ window.hubConnection.on('RematchRequested', (connectionId) => {
 
 window.hubConnection.on('OpponentLeftMatch', () => {
     stopRoundTimer();
+    stopCountdown();
     const titleEl = document.getElementById('matchover-title');
     const subEl = document.getElementById('matchover-sub');
     titleEl.classList.remove('win', 'lose', 'draw');

@@ -12,10 +12,12 @@
     const questionPanel = $('group-question-panel');
     const gameOverEl = $('group-gameover');
     const codeInput = $('room-code-input');
+    const countdownEl = $('countdown-big-room');
 
     let room = null;
     let firstRender = true;
     let questionTimer = null;
+    let countdownTimer = null;
     let hasAnswered = false;
     let knownMembers = new Set();
     let seatOwners = new Map();
@@ -40,12 +42,55 @@
         $('lobby-error').textContent = message;
     }
 
-    // ---------- view switching ----------
+    // ---------- timers ----------
     function stopTimer() {
         if (questionTimer) { clearInterval(questionTimer); questionTimer = null; }
     }
+    function stopCountdown() {
+        if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; }
+        if (countdownEl) {
+            countdownEl.classList.remove('active');
+            countdownEl.style.display = 'none';
+            countdownEl.replaceChildren();
+        }
+    }
+
+    // Standalone 3-2-1-GO overlay. Own timer, tick sounds, no link to the question timer.
+    function runCountdown(from) {
+        if (!countdownEl) return;
+        stopCountdown();
+        // Guarantee the overlay is a direct child of <body> so nothing can clip
+        // or re-parent it, then reveal it on top of everything else.
+        if (countdownEl.parentElement !== document.body) document.body.appendChild(countdownEl);
+        // Drive visibility purely with inline styles so no stylesheet rule can
+        // override it. Drop the !important-bearing classes or they would win.
+        countdownEl.classList.remove('hidden', 'active');
+        countdownEl.style.cssText =
+            'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;' +
+            'background:rgba(0,0,0,.92);z-index:2147483647;pointer-events:none;';
+        const steps = [];
+        for (let n = from; n >= 1; n--) steps.push(String(n));
+        steps.push('GO');
+        let i = 0;
+        const step = () => {
+            const span = document.createElement('span');
+            span.className = 'countdown-num' + (steps[i] === 'GO' ? ' countdown-go' : '');
+            span.textContent = steps[i];
+            countdownEl.replaceChildren(span);
+            // Tick sound for every step (3, 2, 1, GO) using selected.wav.
+            if (typeof GameSound !== 'undefined' && GameSound.select) {
+                try { GameSound.select(); } catch (e) {}
+            }
+            i++;
+            countdownTimer = setTimeout(i < steps.length ? step : stopCountdown, i < steps.length ? 1000 : 800);
+        };
+        step();
+    }
+
+    // ---------- view switching ----------
     function showWaiting() {
         stopTimer();
+        stopCountdown();
         gameView.classList.add('hidden');
         waitingView.classList.remove('hidden');
         questionPanel.classList.add('hidden');
@@ -177,6 +222,7 @@
     standBtn.addEventListener('click', () => hub.invoke('LeaveGroupChair'));
     $('room-leave-btn').addEventListener('click', () => {
         window.groupGameActive = false;
+        stopCountdown();
         document.body.classList.remove('group-game-active');
         hub.invoke('LeaveGroupRoom');
         room = null;
@@ -196,6 +242,42 @@
     });
 
     // ---------- game: only the question and the choices ----------
+    function renderQuestion(index, text, choices, seconds, seated) {
+        questionPanel.classList.remove('hidden');
+        roundStatus.textContent = seated ? '' : 'Spectating';
+        $('group-round-number').textContent = `Question ${index + 1}`;
+        $('group-question-text').textContent = text;
+
+        choicesEl.replaceChildren();
+        choices.forEach((choice, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn choice-btn';
+            btn.textContent = choice;
+            btn.disabled = !seated;
+            btn.addEventListener('click', () => {
+                if (hasAnswered) return;
+                hasAnswered = true;
+                choicesEl.querySelectorAll('button').forEach(o => { o.disabled = true; });
+                btn.classList.add('selected');
+                hub.invoke('SubmitGroupAnswer', i).catch(() => {
+                    hasAnswered = false;
+                    choicesEl.querySelectorAll('button').forEach(o => { o.disabled = false; });
+                    btn.classList.remove('selected');
+                });
+            });
+            choicesEl.append(btn);
+        });
+
+        const deadline = Date.now() + seconds * 1000;
+        const tick = () => {
+            $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            if (Date.now() >= deadline) stopTimer();
+        };
+        tick();
+        questionTimer = setInterval(tick, 100);
+    }
+
     hub.on('GroupNewQuestion', (index, text, choices, seconds) => {
         const seated = Boolean(room && room.seats.some(s => s && s.connectionId === myId()));
         showGame();
@@ -203,90 +285,19 @@
         hasAnswered = false;
         gameOverEl.classList.add('hidden');
         questionPanel.classList.add('hidden');
-        roundStatus.textContent = seated ? '' : 'Spectating';
-        $('group-round-number').textContent = `Question ${index + 1}`;
+        choicesEl.replaceChildren();
 
+        // The question always appears immediately and gets its full time.
+        stopCountdown();
+        if (index === 0) GameSound.menuMusicStop();
+        renderQuestion(index, text, choices, seconds, seated);
+    });
+
+    // Start-of-game countdown. The server sends this BEFORE question 1.
+    hub.on('GroupCountdown', seconds => {
+        showGame();
         GameSound.menuMusicStop();
-        const cd = document.getElementById('countdown-big-room');
-        if (cd) {
-            cd.classList.remove('hidden');
-            let n = 3;
-            const seq = () => {
-                if (n > 0) {
-                    cd.textContent = n;
-                    GameSound.select();
-                    n--;
-                    setTimeout(seq, 1000);
-                } else {
-                    cd.textContent = 'GO';
-                    GameSound.select();
-                    setTimeout(() => {
-                        cd.classList.add('hidden');
-                        cd.textContent = '';
-                        questionPanel.classList.remove('hidden');
-                        $('group-question-text').textContent = text;
-                        choicesEl.replaceChildren();
-                        choices.forEach((choice, i) => {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn choice-btn';
-                            btn.textContent = choice;
-                            btn.disabled = !seated;
-                            btn.addEventListener('click', () => {
-                                if (hasAnswered) return;
-                                hasAnswered = true;
-                                choicesEl.querySelectorAll('button').forEach(o => { o.disabled = true; });
-                                btn.classList.add('selected');
-                                hub.invoke('SubmitGroupAnswer', i).catch(() => {
-                                    hasAnswered = false;
-                                    choicesEl.querySelectorAll('button').forEach(o => { o.disabled = false; });
-                                    btn.classList.remove('selected');
-                                });
-                            });
-                            choicesEl.append(btn);
-                        });
-                        const deadline = Date.now() + seconds * 1000;
-                        const tick = () => {
-                            $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-                            if (Date.now() >= deadline) stopTimer();
-                        };
-                        tick();
-                        questionTimer = setInterval(tick, 100);
-                    }, 800);
-                }
-            };
-            seq();
-        } else {
-            questionPanel.classList.remove('hidden');
-            $('group-question-text').textContent = text;
-            choicesEl.replaceChildren();
-            choices.forEach((choice, i) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn choice-btn';
-                btn.textContent = choice;
-                btn.disabled = !seated;
-                btn.addEventListener('click', () => {
-                    if (hasAnswered) return;
-                    hasAnswered = true;
-                    choicesEl.querySelectorAll('button').forEach(o => { o.disabled = true; });
-                    btn.classList.add('selected');
-                    hub.invoke('SubmitGroupAnswer', i).catch(() => {
-                        hasAnswered = false;
-                        choicesEl.querySelectorAll('button').forEach(o => { o.disabled = false; });
-                        btn.classList.remove('selected');
-                    });
-                });
-                choicesEl.append(btn);
-            });
-            const deadline = Date.now() + seconds * 1000;
-            const tick = () => {
-                $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-                if (Date.now() >= deadline) stopTimer();
-            };
-            tick();
-            questionTimer = setInterval(tick, 100);
-        }
+        runCountdown(seconds || 3);
     });
 
     hub.on('GroupRoundResolved', (index, correctIndex) => {
@@ -298,19 +309,41 @@
     });
 
     hub.on('GroupGameOver', scores => {
+        stopCountdown();
         GameSound.ensureMenuMusicStarted();
         stopTimer();
         questionPanel.classList.add('hidden');
         gameOverEl.classList.remove('hidden');
+
         const ol = $('group-final-scoreboard');
         ol.replaceChildren();
-        (scores || []).sort((a,b) => (b.score||0) - (a.score||0)).forEach((p, idx) => {
+
+        // Sort a copy (not the original) by score, highest first. Array.sort is
+        // stable, so tied players keep their original order.
+        const players = [...(scores || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        if (players.length === 0) {
             const li = document.createElement('li');
-            const rank = idx + 1;
-            if (rank === 1) li.classList.add('top-1');
-            if (rank === 2) li.classList.add('top-2');
-            if (rank === 3) li.classList.add('top-3');
-            li.textContent = `${rank}. ${p.name} \u2014 ${p.score} pts`;
+            li.className = 'lb-empty';
+            li.textContent = 'No scores to show.';
+            ol.append(li);
+            return;
+        }
+
+        players.forEach((p, idx) => {
+            const li = document.createElement('li');
+            if (idx === 0) li.classList.add('top-1');
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'lb-name';
+            nameEl.textContent = p.name;
+            const scoreEl = document.createElement('span');
+            scoreEl.className = 'lb-score';
+            scoreEl.textContent = `${p.score || 0} pts`;
+
+            // The rank number comes from CSS (native list counter), so there is
+            // no separate rank column or element in the markup.
+            li.append(nameEl, scoreEl);
             ol.append(li);
         });
     });

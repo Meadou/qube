@@ -733,20 +733,56 @@ input[type="text"]:focus-visible,
 
 .hit-flash-overlay.flash { animation: hit-flash 0.35s ease-out; }
 
+/* ---------- Start-of-game countdown: full-screen, centered, huge ----------
+   Base rule intentionally has NO display value so the global `.hidden`
+   (display:none !important) always wins while idling. It becomes visible
+   only with the `.active` class, which is defined later in this file. */
 .countdown-big {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(6rem, 15vw, 12rem);
-  font-weight: 900;
-  letter-spacing: 0.25rem;
-  color: #fff;
-  text-shadow: 0 0 60px rgba(255,255,255,0.6), 0 0 120px rgba(255,0,128,0.6);
-  z-index: 999;
-  pointer-events: none;
-  user-select: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 2000000000;
+    pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+}
+
+.countdown-big.active {
+    display: flex !important;
+}
+
+.countdown-num { 
+  display: block; 
+  font-family: var(--font-display); 
+  font-weight: 800; 
+  font-size: 35vw;;  
+  line-height: 1; 
+  color: var(--accent); 
+  font-variant-numeric: tabular-nums; 
+  text-align: center; 
+  animation: countdown-pop 0.6s cubic-bezier(.2, 1.4, .4, 1) both; 
+} 
+
+.countdown-num.countdown-go { 
+  font-size: 35vw;  
+  color: var(--text); 
+  letter-spacing: 0.04em; 
+}
+
+@keyframes countdown-pop {
+    from { transform: scale(0.55); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 @keyframes hit-flash {
@@ -975,7 +1011,6 @@ body:not([data-screen="login"]) .game-brand { display: none; }
 /* game view: centered, nothing else on screen */
 .room-game { margin: auto; width: 100%; max-width: 760px; }
 .room-game .group-question-panel, .room-game .group-gameover { border: 0; margin: 0; padding: 0; text-align: center; }
-.room-game .group-gameover .group-scoreboard { display: inline-block; text-align: left; margin: 12px 0 24px; }
 body.group-game-active .screen-shell { padding: 24px; min-height: 100vh; justify-content: center; }
 
 @media (max-width: 900px) {
@@ -989,25 +1024,121 @@ body.group-game-active .screen-shell { padding: 24px; min-height: 100vh; justify
     .group-seat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) { .group-seat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.timer-top, .hp-value, .round-counter, #group-timer { font-variant-numeric: tabular-nums; }.group-scoreboard-xl {
-  max-width: 640px;
-  font-size: 1.25rem;
-  gap: 0.75rem;
+.timer-top, .hp-value, .round-counter, #group-timer { font-variant-numeric: tabular-nums; }
+
+/* ---------- Final leaderboard: quiz results screen ---------- */
+/* Whole results screen: centered flex column with breathing room. */
+.room-game .group-gameover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 2rem;
+    padding: 2rem;
+    text-align: center;
+    /* The shared shell already pads this screen by 24px top and bottom; cancel
+       that here so the full-height results screen does not add a scrollbar. */
+    margin-top: -24px;
+    margin-bottom: -24px;
 }
+
+.room-game .group-gameover h3 {
+    margin: 0;
+    font-size: clamp(24px, 4.2vw, 36px);
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text);
+}
+
+.room-game .group-gameover .group-scoreboard-xl {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: min(100%, 360px);
+    max-height: 60vh;
+    overflow-y: auto;
+    margin: 0 auto;
+    padding-left: 2rem;
+    list-style: none;
+    counter-reset: rank;
+    text-align: left;
+    color: var(--text);
+}
+
 .group-scoreboard-xl li {
-  padding: 0.75rem 1rem;
-  font-size: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    /* reset so the number, not the row, owns the accent styling */
+    color: inherit;
+    font-weight: 400;
+    counter-increment: rank;
 }
-.group-scoreboard .top-1 {
-  background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(0,0,0,0.4));
-  border-color: rgba(255,215,0,0.8);
-  box-shadow: 0 0 20px rgba(255,215,0,0.4);
+
+/* A flex list item does not render ::marker, so the number is drawn with the
+   native list counter instead. Only the number is accent green and bold. */
+.group-scoreboard-xl li::before {
+    content: counter(rank) ".";
+    flex: none;
+    color: var(--accent);
+    font-weight: 700;
 }
-.group-scoreboard .top-2 {
-  background: linear-gradient(135deg, rgba(192,192,192,0.25), rgba(0,0,0,0.4));
-  border-color: rgba(192,192,192,0.8);
+
+.group-scoreboard-xl .lb-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.group-scoreboard .top-3 {
-  background: linear-gradient(135deg, rgba(205,127,50,0.25), rgba(0,0,0,0.4));
-  border-color: rgba(205,127,50,0.8);
+
+.group-scoreboard-xl .lb-score {
+    flex: none;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--text-dim);
+}
+
+/* first place: accent border and brighter text (color only - only the
+   numbers may be green and bold) */
+.group-scoreboard-xl .top-1 {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.group-scoreboard-xl .top-1 .lb-name,
+.group-scoreboard-xl .top-1 .lb-score {
+    color: var(--text);
+}
+
+/* empty state */
+.group-scoreboard-xl .lb-empty {
+    justify-content: center;
+    color: var(--text-dim);
+    counter-increment: none;
+}
+
+.group-scoreboard-xl .lb-empty::before { content: none; }
+
+.room-game .group-gameover-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.room-game .group-gameover-actions .btn {
+    padding: 0.85rem 2rem;
+}
+
+.room-game .group-gameover-actions .btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
 }
