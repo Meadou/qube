@@ -1,44 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Totally not VibeCoded.io</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <header class="game-brand" aria-hidden="true">
-        <svg class="game-brand-icon" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">
-            <rect x="8" y="0" width="2" height="2"/>
-            <rect x="10" y="0" width="2" height="2"/>
-            <rect x="6" y="2" width="2" height="2"/>
-            <rect x="8" y="2" width="2" height="2"/>
-            <rect x="4" y="4" width="2" height="2"/>
-            <rect x="6" y="4" width="2" height="2"/>
-            <rect x="2" y="6" width="2" height="2"/>
-            <rect x="4" y="6" width="2" height="2"/>
-            <rect x="6" y="6" width="2" height="2"/>
-            <rect x="8" y="6" width="2" height="2"/>
-            <rect x="10" y="6" width="2" height="2"/>
-            <rect x="12" y="6" width="2" height="2"/>
-            <rect x="4" y="8" width="2" height="2"/>
-            <rect x="6" y="8" width="2" height="2"/>
-            <rect x="8" y="8" width="2" height="2"/>
-            <rect x="10" y="8" width="2" height="2"/>
-            <rect x="6" y="10" width="2" height="2"/>
-            <rect x="8" y="10" width="2" height="2"/>
-            <rect x="4" y="12" width="2" height="2"/>
-            <rect x="6" y="12" width="2" height="2"/>
-            <rect x="2" y="14" width="2" height="2"/>
-            <rect x="4" y="14" width="2" height="2"/>
-        </svg>
-        <span class="game-brand-text">Totally not VibeCoded.io</span>
-    </header>
+    
 
     <!-- Top bar: players online -->
     <div id="hud" class="hud">
@@ -54,11 +25,11 @@
     <!-- ===================== LOGIN ===================== -->
     <section id="screen-login" class="screen active">
         <div class="panel">
-            <h1>QuBe</h1>
-            <p class="subtitle">Think fast. Take your place.</p>
+            <h1>Enter Name</h1>
+            <p class="subtitle">Let the world know your name</p>
             <form id="login-form">
                 <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="16" required>
-                <button type="submit" class="btn btn-primary">Enter menu</button>
+                <button type="submit" class="btn btn-primary">Enter</button>
             </form>
         </div>
     </section>
@@ -151,10 +122,11 @@
             </section>
             <section id="group-gameover" class="group-gameover hidden" aria-live="polite">
                 <h3>Quiz complete</h3>
-                <ol id="group-final-scoreboard" class="group-scoreboard"></ol>
+                <ol id="group-final-scoreboard" class="group-scoreboard group-scoreboard-xl"></ol>
                 <button id="group-back-btn" class="btn btn-primary" type="button">Back to room</button>
             </section>
         </div>
+        <div id="countdown-big-room" class="countdown-big hidden"></div>
         <div id="room-toasts" class="room-toasts"></div>
     </section>
 
@@ -162,6 +134,7 @@
     <section id="screen-match" class="screen">
         <div class="panel panel-wide" style="position: relative;">
             <div id="hit-flash-overlay" class="hit-flash-overlay"></div>
+            <div id="countdown-big" class="countdown-big hidden"></div>
             <div class="match-header">
                 <div id="round-counter" class="round-counter">ROUND 1</div>
                 <div id="timer-display" class="timer-top">15</div>
@@ -245,3 +218,5 @@
     <script src="js/ui-sfx.js"></script>
 </body>
 </html>
+
+

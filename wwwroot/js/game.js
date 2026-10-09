@@ -125,24 +125,60 @@ window.hubConnection.on('ReadyUpdate', (connectionId) => {
 });
 
 window.hubConnection.on('NewQuestion', (index, text, choices, roundTimeSeconds) => {
+    GameSound.menuMusicStop();
     hasAnsweredThisRound = false;
-    document.getElementById('ready-panel').classList.add('hidden');
-    document.getElementById('question-text').classList.remove('hidden');
     if (roundTimeSeconds) currentRoundTimeSeconds = roundTimeSeconds;
-    document.getElementById('question-text').textContent = text;
-    document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
 
-    const container = document.getElementById('choices-container');
-    container.innerHTML = '';
-    choices.forEach((choiceText, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'btn choice-btn';
-        btn.textContent = choiceText;
-        btn.addEventListener('click', () => submitAnswer(i, btn));
-        container.appendChild(btn);
-    });
-
-    startRoundTimer();
+    const countdownEl = document.getElementById('countdown-big');
+    if (countdownEl) {
+        countdownEl.classList.remove('hidden');
+        let n = 3;
+        const seq = () => {
+            if (n > 0) {
+                countdownEl.textContent = n;
+                GameSound.select();
+                n--;
+                setTimeout(seq, 1000);
+            } else {
+                countdownEl.textContent = 'GO';
+                GameSound.select();
+                setTimeout(() => {
+                    countdownEl.classList.add('hidden');
+                    countdownEl.textContent = '';
+                    document.getElementById('ready-panel').classList.add('hidden');
+                    document.getElementById('question-text').classList.remove('hidden');
+                    document.getElementById('question-text').textContent = text;
+                    document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
+                    const container = document.getElementById('choices-container');
+                    container.innerHTML = '';
+                    choices.forEach((choiceText, i) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn choice-btn';
+                        btn.textContent = choiceText;
+                        btn.addEventListener('click', () => submitAnswer(i, btn));
+                        container.appendChild(btn);
+                    });
+                    startRoundTimer();
+                }, 800);
+            }
+        };
+        seq();
+    } else {
+        document.getElementById('ready-panel').classList.add('hidden');
+        document.getElementById('question-text').classList.remove('hidden');
+        document.getElementById('question-text').textContent = text;
+        document.getElementById('round-counter').textContent = `ROUND ${index + 1}`;
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '';
+        choices.forEach((choiceText, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn choice-btn';
+            btn.textContent = choiceText;
+            btn.addEventListener('click', () => submitAnswer(i, btn));
+            container.appendChild(btn);
+        });
+        startRoundTimer();
+    }
 });
 
 window.hubConnection.on('PlayerAnswered', (connectionId) => {
@@ -215,11 +251,13 @@ window.hubConnection.on('RoundResult', (correctIndex, outcome, myHP, opponentHP,
 });
 
 window.hubConnection.on('MatchOver', (winnerName) => {
+    GameSound.ensureMenuMusicStarted();
     stopRoundTimer();
     setTimeout(() => showMatchOver(winnerName), 500);
 });
 
 function showMatchOver(winnerName) {
+    GameSound.ensureMenuMusicStarted();
     const titleEl = document.getElementById('matchover-title');
     const subEl = document.getElementById('matchover-sub');
     const iAmWinner = winnerName === window.gameState.playerName;

@@ -8,6 +8,18 @@ const screens = {
     matchover: document.getElementById('screen-matchover'),
 };
 
+function tryStartMusicEarly() {
+    if (window.GameSound && typeof GameSound.ensureMenuMusicStarted === 'function') {
+        try { GameSound.ensureMenuMusicStarted(); } catch (e) {}
+    }
+}
+// Start music as soon as possible
+tryStartMusicEarly();
+// Also resume on user interaction (required by browsers)
+document.addEventListener('click', tryStartMusicEarly, { passive: true });
+document.addEventListener('keydown', tryStartMusicEarly);
+document.addEventListener('touchstart', tryStartMusicEarly, { passive: true });
+
 function showScreen(name) {
     if (window.groupGameActive && name !== 'room') return;
     Object.values(screens).forEach(s => s.classList.remove('active'));

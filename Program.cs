@@ -1,5 +1,7 @@
 using CSharpQuizGame.Hubs;
 using CSharpQuizGame.Services;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,12 +9,59 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<RoomManager>();
 builder.Services.AddSingleton<QuizService>();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("api", opt =>
+    {
+        opt.PermitLimit = 20;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 5;
+    });
+
+    options.AddFixedWindowLimiter("chat", opt =>
+    {
+        opt.PermitLimit = 30;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 2;
+    });
+
+    options.AddFixedWindowLimiter("hub", opt =>
+    {
+        opt.PermitLimit = 60;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 5;
+    });
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, key => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromSeconds(10),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 10
+        });
+    });
+
+    options.OnRejected = (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.Headers["Retry-After"] = "10";
+        return new ValueTask();
+    };
+});
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseRateLimiter();
 
-app.MapHub<GameHub>("/gamehub");
+app.MapHub<GameHub>("/gamehub").RequireRateLimiting("hub");
 
 app.MapPost("/api/admin/quiz", async (HttpRequest request, QuizService quiz) =>
 {
@@ -20,9 +69,9 @@ app.MapPost("/api/admin/quiz", async (HttpRequest request, QuizService quiz) =>
     var text = await reader.ReadToEndAsync();
     quiz.ReplaceQuestions(text);
     return Results.Ok(new { count = quiz.Count });
-});
+}).RequireRateLimiting("api");
 
-app.MapGet("/api/admin/quiz/count", (QuizService quiz) => Results.Ok(new { count = quiz.Count }));
+app.MapGet("/api/admin/quiz/count", (QuizService quiz) => Results.Ok(new { count = quiz.Count })).RequireRateLimiting("api");
 
 var quizService = app.Services.GetRequiredService<QuizService>();
 var sampleQuestionsPath = Path.Combine(builder.Environment.ContentRootPath, "SampleQuestions.aiken.txt");

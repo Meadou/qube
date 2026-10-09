@@ -25,10 +25,12 @@ public class GameHub : Hub
 
     public async Task JoinLobby(string playerName, CharacterConfig character)
     {
+        var name = string.IsNullOrWhiteSpace(playerName) ? "Player" : playerName.Trim();
+        if (name.Length > 16) name = name.Substring(0, 16);
         var player = new PlayerInfo
         {
             ConnectionId = Context.ConnectionId,
-            Name = string.IsNullOrWhiteSpace(playerName) ? "Player" : playerName.Trim(),
+            Name = name,
             Character = character
         };
         _rooms.AddToLobby(player);
@@ -51,6 +53,7 @@ public class GameHub : Hub
     public async Task SendChatMessage(string message)
     {
         if (string.IsNullOrWhiteSpace(message)) return;
+        if (message.Length > 200) return;
         if (!_rooms.LobbyPlayers.TryGetValue(Context.ConnectionId, out var player)) return;
 
         await _hubContext.Clients.Group("Lobby").SendAsync("ReceiveChatMessage", player.Name, message);

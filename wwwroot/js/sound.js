@@ -3,10 +3,19 @@ const GameSound = (() => {
     let musicMuted = localStorage.getItem('brawl-music-muted') === 'true';
     let sfxMuted = localStorage.getItem('brawl-sfx-muted') === 'true';
 
-    let menuMusic = null;
+    const MUSIC_VOLUME = 0.4;   // 30% quieter than full
+    const SFX_VOLUME = 1;
+
     let selectSfx = null;
     let selectedSfx = null;
     let joinSfx = null;
+
+    // ---- Menu music (Web Audio, gapless loop) ----
+    let musicBuffer = null;
+    let musicLoading = null;
+    let musicSource = null;
+    let musicGain = null;
+    let musicWanted = false;
 
     function getCtx() {
         if (!ctx) {
@@ -42,20 +51,79 @@ const GameSound = (() => {
             const audio = new Audio(path);
             audio.loop = loop;
             audio.preload = 'auto';
+            audio.volume = SFX_VOLUME;
             return audio;
         } catch (e) {
             return null;
         }
     }
 
-    function ensureMenuMusic() {
-        if (!menuMusic) menuMusic = loadAudio('audio/QUBE-MENU-Song.wav', true);
-    }
-
     function ensureSfx() {
         if (!selectSfx) selectSfx = loadAudio('audio/select.wav', false);
         if (!selectedSfx) selectedSfx = loadAudio('audio/selected.wav', false);
         if (!joinSfx) joinSfx = loadAudio('audio/join.wav', false);
+    }
+
+    function playSfx(name) {
+        ensureSfx();
+        const audio = name === 'select' ? selectSfx : name === 'selected' ? selectedSfx : joinSfx;
+        if (sfxMuted || !audio) return;
+        try {
+            audio.currentTime = 0;
+            const p = audio.play();
+            if (p && p.catch) p.catch(() => {});
+        } catch (e) {
+        }
+    }
+
+    function loadMusicBuffer() {
+        if (musicBuffer) return Promise.resolve(musicBuffer);
+        if (!musicLoading) {
+            musicLoading = fetch('audio/IttyBitty.wav')
+                .then(r => r.arrayBuffer())
+                .then(data => getCtx().decodeAudioData(data))
+                .then(buf => (musicBuffer = buf))
+                .catch(err => {
+                    console.warn('Menu music failed to load', err);
+                    musicLoading = null;
+                    return null;
+                });
+        }
+        return musicLoading;
+    }
+
+    async function startMusic() {
+        musicWanted = true;
+        if (musicSource) return;
+        const buf = await loadMusicBuffer();
+        if (!buf || !musicWanted || musicSource) return;
+
+        const audioCtx = getCtx();
+        musicGain = audioCtx.createGain();
+        musicGain.gain.value = musicMuted ? 0 : MUSIC_VOLUME;
+
+        musicSource = audioCtx.createBufferSource();
+        musicSource.buffer = buf;
+        musicSource.loop = true;            // sample-accurate, gapless
+        // musicSource.loopStart = 0;       // optional: loop only a sub-section
+        // musicSource.loopEnd = buf.duration;
+        musicSource.connect(musicGain);
+        musicGain.connect(audioCtx.destination);
+        musicSource.start(0);
+    }
+
+    function stopMusic() {
+        musicWanted = false;
+        if (musicSource) {
+            try { musicSource.stop(); } catch (e) {}
+            try { musicSource.disconnect(); } catch (e) {}
+            musicSource = null;
+        }
+    }
+
+    function applyMusicMute() {
+        if (musicGain) musicGain.gain.value = musicMuted ? 0 : MUSIC_VOLUME;
+        if (!musicMuted && musicWanted) startMusic();
     }
 
     return {
@@ -67,86 +135,31 @@ const GameSound = (() => {
             sfxMuted = value;
             localStorage.setItem('brawl-music-muted', String(musicMuted));
             localStorage.setItem('brawl-sfx-muted', String(sfxMuted));
-            try {
-                ensureMenuMusic();
-                if (menuMusic) menuMusic.muted = musicMuted;
-                if (musicMuted) {
-                    menuMusic.pause();
-                } else {
-                    const p = menuMusic.play();
-                    if (p && p.catch) p.catch(() => {});
-                }
-            } catch (e) {
-            }
+            applyMusicMute();
         },
         setMusicMuted(value) {
             musicMuted = value;
             localStorage.setItem('brawl-music-muted', String(musicMuted));
-            try {
-                ensureMenuMusic();
-                if (menuMusic) menuMusic.muted = musicMuted;
-                if (musicMuted) {
-                    menuMusic.pause();
-                } else {
-                    const p = menuMusic.play();
-                    if (p && p.catch) p.catch(() => {});
-                }
-            } catch (e) {
-            }
+            applyMusicMute();
         },
         setSfxMuted(value) {
             sfxMuted = value;
             localStorage.setItem('brawl-sfx-muted', String(sfxMuted));
         },
         menuMusicStart() {
-            ensureMenuMusic();
-            if (!menuMusic) return;
-            try {
-                getCtx();
-                menuMusic.muted = musicMuted;
-                menuMusic.loop = true;
-                const p = menuMusic.play();
-                if (p && p.catch) p.catch(() => {});
-            } catch (e) {
-            }
+            getCtx();   // also resumes the context after a user gesture
+            startMusic();
+        },
+        ensureMenuMusicStarted() {
+            getCtx();
+            startMusic();   // no-op if already playing
         },
         menuMusicStop() {
-            ensureMenuMusic();
-            if (menuMusic) {
-                try { menuMusic.pause(); } catch (e) {}
-                menuMusic.currentTime = 0;
-            }
+            stopMusic();
         },
-        hover() {
-            ensureSfx();
-            if (sfxMuted || !selectSfx) return;
-            try {
-                selectSfx.currentTime = 0;
-                const p = selectSfx.play();
-                if (p && p.catch) p.catch(() => {});
-            } catch (e) {
-            }
-        },
-        select() {
-            ensureSfx();
-            if (sfxMuted || !selectedSfx) return;
-            try {
-                selectedSfx.currentTime = 0;
-                const p = selectedSfx.play();
-                if (p && p.catch) p.catch(() => {});
-            } catch (e) {
-            }
-        },
-        join() {
-            ensureSfx();
-            if (sfxMuted || !joinSfx) return;
-            try {
-                joinSfx.currentTime = 0;
-                const p = joinSfx.play();
-                if (p && p.catch) p.catch(() => {});
-            } catch (e) {
-            }
-        },
+        hover() { playSfx('select'); },
+        select() { playSfx('selected'); },
+        join() { playSfx('join'); },
         answerLock() { tone(500, 0.08, 'square', 0.05); },
         correct() {
             tone(660, 0.09, 'square', 0.07, 0);
@@ -163,5 +176,5 @@ const GameSound = (() => {
             [400, 320, 240].forEach((f, i) => tone(f, 0.22, 'sawtooth', 0.08, i * 0.13));
         },
     };
-    window.GameSound = GameSound;
 })();
+window.GameSound = GameSound;   // outside the IIFE so it actually runs

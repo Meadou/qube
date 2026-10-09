@@ -202,39 +202,91 @@
         stopTimer();
         hasAnswered = false;
         gameOverEl.classList.add('hidden');
-        questionPanel.classList.remove('hidden');
+        questionPanel.classList.add('hidden');
         roundStatus.textContent = seated ? '' : 'Spectating';
         $('group-round-number').textContent = `Question ${index + 1}`;
-        $('group-question-text').textContent = text;
 
-        choicesEl.replaceChildren();
-        choices.forEach((choice, i) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn choice-btn';
-            btn.textContent = choice;
-            btn.disabled = !seated;
-            btn.addEventListener('click', () => {
-                if (hasAnswered) return;
-                hasAnswered = true;
-                choicesEl.querySelectorAll('button').forEach(o => { o.disabled = true; });
-                btn.classList.add('selected');
-                hub.invoke('SubmitGroupAnswer', i).catch(() => {
-                    hasAnswered = false;
-                    choicesEl.querySelectorAll('button').forEach(o => { o.disabled = false; });
-                    btn.classList.remove('selected');
+        GameSound.menuMusicStop();
+        const cd = document.getElementById('countdown-big-room');
+        if (cd) {
+            cd.classList.remove('hidden');
+            let n = 3;
+            const seq = () => {
+                if (n > 0) {
+                    cd.textContent = n;
+                    GameSound.select();
+                    n--;
+                    setTimeout(seq, 1000);
+                } else {
+                    cd.textContent = 'GO';
+                    GameSound.select();
+                    setTimeout(() => {
+                        cd.classList.add('hidden');
+                        cd.textContent = '';
+                        questionPanel.classList.remove('hidden');
+                        $('group-question-text').textContent = text;
+                        choicesEl.replaceChildren();
+                        choices.forEach((choice, i) => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn choice-btn';
+                            btn.textContent = choice;
+                            btn.disabled = !seated;
+                            btn.addEventListener('click', () => {
+                                if (hasAnswered) return;
+                                hasAnswered = true;
+                                choicesEl.querySelectorAll('button').forEach(o => { o.disabled = true; });
+                                btn.classList.add('selected');
+                                hub.invoke('SubmitGroupAnswer', i).catch(() => {
+                                    hasAnswered = false;
+                                    choicesEl.querySelectorAll('button').forEach(o => { o.disabled = false; });
+                                    btn.classList.remove('selected');
+                                });
+                            });
+                            choicesEl.append(btn);
+                        });
+                        const deadline = Date.now() + seconds * 1000;
+                        const tick = () => {
+                            $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+                            if (Date.now() >= deadline) stopTimer();
+                        };
+                        tick();
+                        questionTimer = setInterval(tick, 100);
+                    }, 800);
+                }
+            };
+            seq();
+        } else {
+            questionPanel.classList.remove('hidden');
+            $('group-question-text').textContent = text;
+            choicesEl.replaceChildren();
+            choices.forEach((choice, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn choice-btn';
+                btn.textContent = choice;
+                btn.disabled = !seated;
+                btn.addEventListener('click', () => {
+                    if (hasAnswered) return;
+                    hasAnswered = true;
+                    choicesEl.querySelectorAll('button').forEach(o => { o.disabled = true; });
+                    btn.classList.add('selected');
+                    hub.invoke('SubmitGroupAnswer', i).catch(() => {
+                        hasAnswered = false;
+                        choicesEl.querySelectorAll('button').forEach(o => { o.disabled = false; });
+                        btn.classList.remove('selected');
+                    });
                 });
+                choicesEl.append(btn);
             });
-            choicesEl.append(btn);
-        });
-
-        const deadline = Date.now() + seconds * 1000;
-        const tick = () => {
-            $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-            if (Date.now() >= deadline) stopTimer();
-        };
-        tick();
-        questionTimer = setInterval(tick, 100);
+            const deadline = Date.now() + seconds * 1000;
+            const tick = () => {
+                $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+                if (Date.now() >= deadline) stopTimer();
+            };
+            tick();
+            questionTimer = setInterval(tick, 100);
+        }
     });
 
     hub.on('GroupRoundResolved', (index, correctIndex) => {
@@ -246,14 +298,19 @@
     });
 
     hub.on('GroupGameOver', scores => {
+        GameSound.ensureMenuMusicStarted();
         stopTimer();
         questionPanel.classList.add('hidden');
         gameOverEl.classList.remove('hidden');
         const ol = $('group-final-scoreboard');
         ol.replaceChildren();
-        (scores || []).forEach(p => {
+        (scores || []).sort((a,b) => (b.score||0) - (a.score||0)).forEach((p, idx) => {
             const li = document.createElement('li');
-            li.textContent = `${p.name} \u2014 ${p.score} pts`;
+            const rank = idx + 1;
+            if (rank === 1) li.classList.add('top-1');
+            if (rank === 2) li.classList.add('top-2');
+            if (rank === 3) li.classList.add('top-3');
+            li.textContent = `${rank}. ${p.name} \u2014 ${p.score} pts`;
             ol.append(li);
         });
     });
