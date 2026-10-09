@@ -1,6 +1,7 @@
 const GameSound = (() => {
     let ctx = null;
-    let muted = localStorage.getItem('brawl-muted') === 'true';
+    let musicMuted = localStorage.getItem('brawl-music-muted') === 'true';
+    let sfxMuted = localStorage.getItem('brawl-sfx-muted') === 'true';
 
     let menuMusic = null;
     let selectSfx = null;
@@ -17,7 +18,7 @@ const GameSound = (() => {
     }
 
     function tone(freq, duration, type, gainPeak, delay = 0) {
-        if (muted) return;
+        if (sfxMuted) return;
         try {
             const audioCtx = getCtx();
             const osc = audioCtx.createOscillator();
@@ -57,32 +58,19 @@ const GameSound = (() => {
         if (!joinSfx) joinSfx = loadAudio('audio/join.wav', false);
     }
 
-    function playAudio(audio, restart = false) {
-        if (muted || !audio) return;
-        try {
-            getCtx();
-            if (restart || audio.paused) {
-                audio.currentTime = 0;
-                const p = audio.play();
-                if (p && p.catch) p.catch(() => {});
-            } else {
-                audio.currentTime = 0;
-                const p = audio.play();
-                if (p && p.catch) p.catch(() => {});
-            }
-        } catch (e) {
-        }
-    }
-
     return {
-        isMuted: () => muted,
+        isMuted: () => musicMuted && sfxMuted,
+        isMusicMuted: () => musicMuted,
+        isSfxMuted: () => sfxMuted,
         setMuted(value) {
-            muted = value;
-            localStorage.setItem('brawl-muted', String(muted));
+            musicMuted = value;
+            sfxMuted = value;
+            localStorage.setItem('brawl-music-muted', String(musicMuted));
+            localStorage.setItem('brawl-sfx-muted', String(sfxMuted));
             try {
                 ensureMenuMusic();
-                if (menuMusic) menuMusic.muted = muted;
-                if (muted) {
+                if (menuMusic) menuMusic.muted = musicMuted;
+                if (musicMuted) {
                     menuMusic.pause();
                 } else {
                     const p = menuMusic.play();
@@ -91,12 +79,31 @@ const GameSound = (() => {
             } catch (e) {
             }
         },
+        setMusicMuted(value) {
+            musicMuted = value;
+            localStorage.setItem('brawl-music-muted', String(musicMuted));
+            try {
+                ensureMenuMusic();
+                if (menuMusic) menuMusic.muted = musicMuted;
+                if (musicMuted) {
+                    menuMusic.pause();
+                } else {
+                    const p = menuMusic.play();
+                    if (p && p.catch) p.catch(() => {});
+                }
+            } catch (e) {
+            }
+        },
+        setSfxMuted(value) {
+            sfxMuted = value;
+            localStorage.setItem('brawl-sfx-muted', String(sfxMuted));
+        },
         menuMusicStart() {
             ensureMenuMusic();
             if (!menuMusic) return;
             try {
                 getCtx();
-                menuMusic.muted = muted;
+                menuMusic.muted = musicMuted;
                 menuMusic.loop = true;
                 const p = menuMusic.play();
                 if (p && p.catch) p.catch(() => {});
@@ -112,7 +119,7 @@ const GameSound = (() => {
         },
         hover() {
             ensureSfx();
-            if (muted || !selectSfx) return;
+            if (sfxMuted || !selectSfx) return;
             try {
                 selectSfx.currentTime = 0;
                 const p = selectSfx.play();
@@ -122,7 +129,7 @@ const GameSound = (() => {
         },
         select() {
             ensureSfx();
-            if (muted || !selectedSfx) return;
+            if (sfxMuted || !selectedSfx) return;
             try {
                 selectedSfx.currentTime = 0;
                 const p = selectedSfx.play();
@@ -132,7 +139,7 @@ const GameSound = (() => {
         },
         join() {
             ensureSfx();
-            if (muted || !joinSfx) return;
+            if (sfxMuted || !joinSfx) return;
             try {
                 joinSfx.currentTime = 0;
                 const p = joinSfx.play();
