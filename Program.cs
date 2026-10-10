@@ -1,9 +1,23 @@
 using CSharpQuizGame.Hubs;
 using CSharpQuizGame.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Bind to the port provided by the hosting platform (Render/Railway/etc.) on all interfaces.
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+// Trust the platform's reverse proxy so the rate limiter sees the real client IP
+// instead of the proxy's address (which would make every player share one bucket).
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<RoomManager>();
@@ -57,6 +71,7 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseRateLimiter();
