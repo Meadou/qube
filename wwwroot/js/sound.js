@@ -10,12 +10,21 @@ const GameSound = (() => {
     let selectedSfx = null;
     let joinSfx = null;
 
-    // ---- Menu music (Web Audio, gapless loop) ----
-    let musicBuffer = null;
-    let musicLoading = null;
-    let musicSource = null;
-    let musicGain = null;
+    // ---- Menu music (streaming <audio>: starts after a small buffer, no full download) ----
+    const MUSIC_SRC = 'audio/IttyBitty.mp3';
+    let music = null;
     let musicWanted = false;
+
+    function ensureMusic() {
+        if (!music) {
+            music = new Audio(MUSIC_SRC);
+            music.loop = true;
+            music.preload = 'auto';
+            music.volume = MUSIC_VOLUME;
+            music.muted = musicMuted;
+        }
+        return music;
+    }
 
     function getCtx() {
         if (!ctx) {
@@ -76,53 +85,29 @@ const GameSound = (() => {
         }
     }
 
-    function loadMusicBuffer() {
-        if (musicBuffer) return Promise.resolve(musicBuffer);
-        if (!musicLoading) {
-            musicLoading = fetch('audio/IttyBitty.wav')
-                .then(r => r.arrayBuffer())
-                .then(data => getCtx().decodeAudioData(data))
-                .then(buf => (musicBuffer = buf))
-                .catch(err => {
-                    console.warn('Menu music failed to load', err);
-                    musicLoading = null;
-                    return null;
-                });
-        }
-        return musicLoading;
-    }
-
-    async function startMusic() {
+    function startMusic() {
         musicWanted = true;
-        if (musicSource) return;
-        const buf = await loadMusicBuffer();
-        if (!buf || !musicWanted || musicSource) return;
-
-        const audioCtx = getCtx();
-        musicGain = audioCtx.createGain();
-        musicGain.gain.value = musicMuted ? 0 : MUSIC_VOLUME;
-
-        musicSource = audioCtx.createBufferSource();
-        musicSource.buffer = buf;
-        musicSource.loop = true;            // sample-accurate, gapless
-        // musicSource.loopStart = 0;       // optional: loop only a sub-section
-        // musicSource.loopEnd = buf.duration;
-        musicSource.connect(musicGain);
-        musicGain.connect(audioCtx.destination);
-        musicSource.start(0);
+        const el = ensureMusic();
+        el.muted = musicMuted;
+        el.volume = MUSIC_VOLUME;
+        if (!el.paused) return;
+        const p = el.play();
+        // Autoplay may be blocked until the first user gesture; retried on the next one.
+        if (p && p.catch) p.catch(() => {});
     }
 
     function stopMusic() {
         musicWanted = false;
-        if (musicSource) {
-            try { musicSource.stop(); } catch (e) {}
-            try { musicSource.disconnect(); } catch (e) {}
-            musicSource = null;
+        if (music) {
+            try { music.pause(); } catch (e) {}
         }
     }
 
     function applyMusicMute() {
-        if (musicGain) musicGain.gain.value = musicMuted ? 0 : MUSIC_VOLUME;
+        if (music) {
+            music.muted = musicMuted;
+            music.volume = MUSIC_VOLUME;
+        }
         if (!musicMuted && musicWanted) startMusic();
     }
 
