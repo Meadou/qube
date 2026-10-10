@@ -1,69 +1,69 @@
-What is Magbabaya to the Obu Manuvu?
-A) A forest guard
-B) The Supreme Being
-C) A tribal healer
-D) A river spirit
-ANSWER: B
-
-What do the Obu Manuvu call disease epidemics?
-A) Pusaka
-B) Iliyan
-C) Pama
-D) Uyon
-ANSWER: D
-
-How does the pama ritual detect disasters?
-A) Reading river color
-B) Counting passing birds
-C) Watching hanging firewood
-D) Reading burned smoke
-ANSWER: C
-
-What are iliyan?
-A) Natural safe havens
-B) Volunteer forest guards
-C) Spiritual warning conduits
-D) Communal labor groups
+What does HTTP stand for in web browsing?
+A) Hyper Text Transfer Protocol
+B) High Transfer Tech Protocol
+C) Hyperlink Text Terminal Program
+D) Home Technology Transmission Protocol
 ANSWER: A
 
-What does Pusaka mainly involve?
-A) Labor exchange
-B) Cultural conservation
-C) Riverbank evacuation
-D) Epidemic rituals
-ANSWER: B
-
-What does Matigsalug mean?
-A) People of the mountain
-B) People of the forest
-C) People of the river
-D) People of the elders
+Which of the following is an open-source operating system?
+A) Windows 11
+B) macOS
+C) Linux
+D) iOS
 ANSWER: C
 
-What is the Matigsalug customary law called?
-A) Pasagi
-B) Hungos
-C) Kaingin
-D) Baylan
-ANSWER: A
-
-Which sign warns the Matigsalug of floods?
-A) Dropping well levels
-B) Swaying hanging firewood
-C) Silent morning birds
-D) Fish jumping excessively
-ANSWER: D
-
-What does brown, fast-flowing river water tell the Matigsalug?
-A) A drought is coming
-B) Upstream rain risks landslides
-C) Fishing will be good
-D) An epidemic is near
+What is the main function of a DNS server?
+A) To scan files for potential malware
+B) To convert domain names into IP addresses
+C) To route physical data packets over cables
+D) To back up database files automatically
 ANSWER: B
 
-What is hungos?
-A) Mutual labor sharing
-B) Swidden farming method
-C) A spiritual ritual
-D) An evacuation shelter
+Which database language is primarily used to query and manage relational databases?
+A) Python
+B) HTML
+C) SQL
+D) XML
+ANSWER: C
+
+What type of malware is designed to lock your files and demand payment to unlock them?
+A) Ransomware
+B) Spyware
+C) Trojan Horse
+D) Worm
+ANSWER: A
+
+In networking, what does the acronym LAN stand for?
+A) Long Access Network
+B) Local Area Network
+C) Logic Allocation Node
+D) Linux Assigned Network
+ANSWER: B
+
+Which port number is commonly used by the secure HTTPS protocol?
+A) 80
+B) 21
+C) 25
+D) 443
+ANSWER: D
+
+What is the primary purpose of a firewall in a computer network?
+A) To speed up the internet connection
+B) To monitor and filter incoming and outgoing traffic
+C) To store large amounts of user data
+D) To compile programming source code
+ANSWER: B
+
+Which programming language is best known for its use in client-side web development?
+A) Java
+B) C++
+C) JavaScript
+D) Ruby
+ANSWER: C
+
+What is the term used for copying data to a temporary storage area to compensate for speed differences?
+A) Buffering
+C) Compiling
+B) Hashing
+D) Streaming
 ANSWER: A
