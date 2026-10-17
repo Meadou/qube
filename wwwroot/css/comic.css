@@ -1,0 +1,211 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&display=swap');
+
+/* =========================================================
+   QuBe comic pass, step 1: palette, base controls, menu slabs.
+   Loaded AFTER style.css so it wins the cascade.
+   ========================================================= */
+
+:root {
+    --ink: #14100d;
+    --cream: #f6ecd2;
+    --mustard: #f4b63f;
+    --comic-red: #e2483d;
+    --comic-blue: #6aa7cf;
+
+    --bg: #24365f;
+    --surface: #2c4072;
+    --surface-inset: #1a2748;
+    --border: #14100d;
+    --border-strong: #14100d;
+    --text: #fbf3dc;
+    --text-dim: #d3c9a8;
+    --text-faint: #9a9378;
+
+    --accent: #f4b63f;
+    --accent-strong: #ffcf66;
+    --accent-ink: #14100d;
+
+    --font-display: 'Bangers', 'Impact', sans-serif;
+    --font-sans: 'Comic Neue', 'Segoe UI', sans-serif;
+
+    --radius: 0;
+}
+
+body { font-family: var(--font-sans); font-weight: 700; }
+
+/* halftone dots replace the old grid texture */
+body::before {
+    opacity: 1;
+    background-image: radial-gradient(rgba(244, 182, 63, .13) 1.6px, transparent 1.8px);
+    background-size: 14px 14px;
+}
+
+h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: .04em;
+}
+h1 { font-size: 40px; }
+h2 { font-size: 30px; }
+
+/* ---------- Base controls ---------- */
+
+.btn {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 400;
+    letter-spacing: .06em;
+    background: var(--cream);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: transform .1s ease, box-shadow .1s ease, background .1s ease;
+}
+.btn:hover {
+    background: #fff7e0;
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--ink);
+}
+.btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+.btn-primary { background: var(--mustard); color: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.btn-primary:hover { background: var(--accent-strong); box-shadow: 5px 5px 0 var(--ink); }
+.btn:disabled { opacity: .5; transform: none; box-shadow: none; }
+
+.panel { border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+
+/* ---------- Top bar and chat sidebar ---------- */
+
+.hud { background: var(--ink); border-bottom: 4px solid var(--mustard); }
+.hud-online { font-family: var(--font-display); font-size: 16px; letter-spacing: .1em; font-weight: 400; }
+#current-player-name { font-family: var(--font-display); font-weight: 400; letter-spacing: .06em; font-size: 20px; }
+.global-chat { background: rgba(20, 16, 13, .55); border-right: 4px solid var(--ink); }
+.eyebrow { font-family: var(--font-display); font-size: 14px; letter-spacing: .12em; font-weight: 400; }
+
+/* ---------- Screen titles ---------- */
+
+.screen-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(46px, 7vw, 76px);
+    letter-spacing: .05em;
+    color: var(--cream);
+    text-shadow: 3px 3px 0 var(--comic-red), 6px 6px 0 var(--ink);
+    transform: rotate(-2deg);
+    transform-origin: left center;
+    margin-bottom: 16px;
+}
+
+/* ---------- Menu slabs ---------- */
+
+.slabs { gap: 26px; }
+.slabs > :nth-child(1) { --tilt: -1.2deg; }
+.slabs > :nth-child(2) { --tilt: .8deg; }
+.slabs > :nth-child(3) { --tilt: -.6deg; }
+
+.slab-pink   { --slab-bg: var(--comic-red); }
+.slab-purple { --slab-bg: var(--cream); }
+.slab-green  { --slab-bg: var(--mustard); }
+.slab-blue   { --slab-bg: var(--comic-blue); }
+
+.menu-slab {
+    --tilt: 0deg;
+    color: var(--ink);
+    background: var(--slab-bg);
+    border: 4px solid var(--ink);
+    border-radius: 0;
+    box-shadow: 8px 8px 0 var(--ink);
+    transform: rotate(var(--tilt));
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+/* halftone corner replaces the old dark triangle */
+.menu-slab::before {
+    width: 260px;
+    background-image: radial-gradient(rgba(20, 16, 13, .28) 2px, transparent 2.3px);
+    background-size: 11px 11px;
+    background-color: transparent;
+}
+
+.menu-slab:hover,
+.menu-slab:focus-visible {
+    background: var(--slab-bg);
+    filter: brightness(1.07);
+    transform: translate(-10px, -6px) rotate(0deg);
+    box-shadow: 14px 14px 0 var(--ink);
+    outline: none;
+}
+.menu-slab:focus-visible { outline: 3px solid var(--cream); outline-offset: 4px; }
+
+.slab-static:hover,
+.menu-slab.slab-disabled:hover {
+    background: var(--slab-bg);
+    filter: none;
+    transform: rotate(var(--tilt));
+    box-shadow: 8px 8px 0 var(--ink);
+}
+
+/* "coming soon" slabs stay visible but clearly not clickable */
+.menu-slab[aria-disabled="true"] { cursor: not-allowed; filter: saturate(.55) brightness(.92); }
+.menu-slab[aria-disabled="true"]:hover,
+.menu-slab[aria-disabled="true"]:focus-visible {
+    filter: saturate(.55) brightness(.92);
+    transform: rotate(var(--tilt));
+    box-shadow: 8px 8px 0 var(--ink);
+}
+
+/* glyph becomes an ink badge in the slab's own color */
+.slab-glyph {
+    display: grid;
+    place-items: center;
+    width: 96px;
+    height: 84px;
+    background: var(--ink);
+    color: var(--slab-bg);
+    font: 400 46px/1 var(--font-display);
+    letter-spacing: .04em;
+    transform: rotate(-4deg);
+}
+
+.slab-text strong {
+    font: 400 clamp(34px, 5vw, 60px)/1 var(--font-display);
+    letter-spacing: .05em;
+    color: var(--ink);
+    text-shadow: 2px 2px 0 rgba(255, 255, 255, .35);
+}
+.slab-text small {
+    font: 700 clamp(14px, 1.5vw, 18px) var(--font-sans);
+    letter-spacing: 0;
+    text-transform: none;
+    opacity: 1;
+    color: var(--ink);
+}
+
+/* join-by-code input sits inside a slab */
+.join-row input {
+    font: 400 32px var(--font-display);
+    letter-spacing: .25em;
+    background: var(--cream);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 0;
+    box-shadow: 3px 3px 0 var(--ink);
+}
+.join-row input::placeholder { color: rgba(20, 16, 13, .4); }
+.join-row input:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; background: #fff7e0; }
+
+.status-text { font-weight: 700; }
+.back-btn { align-self: flex-start; }
+
+/* ---------- Small screens and reduced motion ---------- */
+
+@media (max-width: 900px) {
+    .menu-slab { --tilt: 0deg; box-shadow: 5px 5px 0 var(--ink); }
+    .slabs > * { --tilt: 0deg; }
+    .menu-slab:hover, .menu-slab:focus-visible { transform: none; box-shadow: 5px 5px 0 var(--ink); }
+    .slab-glyph { width: 64px; height: 58px; font-size: 30px; }
+    .screen-title { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-slab:hover, .menu-slab:focus-visible, .btn:hover { transform: none; }
+}
