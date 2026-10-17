@@ -7,8 +7,13 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 // Bind to the port provided by the hosting platform (Render/Railway/etc.) on all interfaces.
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Only override the URL when the platform supplies PORT, so local runs still honor
+// the launch profile (applicationUrl) from Properties/launchSettings.json.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // Trust the platform's reverse proxy so the rate limiter sees the real client IP
 // instead of the proxy's address (which would make every player share one bucket).

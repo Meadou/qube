@@ -271,7 +271,9 @@
 
         const deadline = Date.now() + seconds * 1000;
         const tick = () => {
-            $('group-timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            $('group-timer').textContent = left;
+            $('group-timer').parentElement.classList.toggle('urgent', left <= 2 && left > 0);
             if (Date.now() >= deadline) stopTimer();
         };
         tick();
@@ -333,6 +335,7 @@
         players.forEach((p, idx) => {
             const li = document.createElement('li');
             if (idx === 0) li.classList.add('top-1');
+            if (p.name === window.gameState.playerName) li.classList.add('is-me');
 
             const nameEl = document.createElement('span');
             nameEl.className = 'lb-name';
